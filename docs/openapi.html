@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Explorer - Kinmel</title>
+    <meta name="description" content="Interactive OpenAPI documentation for Kinmel Inventory System">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
+    
+    <!-- Redoc -->
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        .nav-header {
+            background: #1a1a2e;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border-bottom: 1px solid #30363d;
+        }
+        .nav-header a {
+            color: #58a6ff;
+            text-decoration: none;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 14px;
+        }
+        .nav-header a:hover {
+            text-decoration: underline;
+        }
+        .nav-header .brand {
+            font-weight: 600;
+            color: #f0f6fc;
+            font-size: 16px;
+        }
+        .nav-header .sep {
+            color: #30363d;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-header">
+        <a href="index.html" class="brand">📦 Kinmel Docs</a>
+        <span class="sep">|</span>
+        <a href="index.html">← Back to Documentation</a>
+        <span class="sep">|</span>
+        <a href="api-reference.html">API Quick Reference</a>
+    </div>
+    
+    <div id="redoc-container"></div>
+    
+    <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+    <script>
+        // OpenAPI specification
+        const spec = {
+            "openapi": "3.1.0",
+            "info": {
+                "title": "Kinmel Inventory API",
+                "version": "1.0.0",
+                "description": "Production-grade grocery inventory management system API.\n\n## Authentication\n\nAll endpoints except health checks require JWT authentication.\n\n```\nAuthorization: Bearer <token>\n```\n\n## Rate Limiting\n\n- Default: 60 requests/minute per user\n\n## Error Format\n\n```json\n{\n  \"detail\": {\n    \"message\": \"Error description\",\n    \"code\": \"ERROR_CODE\"\n  }\n}\n```"
+            },
+            "servers": [
+                {"url": "http://localhost:8000", "description": "Local Development"},
+                {"url": "https://api.kinmel.local", "description": "Production"}
+            ],
+            "tags": [
+                {"name": "Health", "description": "Service health checks"},
+                {"name": "Inventory", "description": "Stock management operations"},
+                {"name": "Admin", "description": "Audit and administrative endpoints (Manager+ only)"}
+            ],
+            "paths": {
+                "/health": {
+                    "get": {
+                        "tags": ["Health"],
+                        "summary": "Health check",
+                        "description": "Basic health check for load balancers",
+                        "responses": {
+                            "200": {
+                                "description": "Service is healthy",
+                                "content": {
+                                    "application/json": {
+                                        "example": {"status": "healthy", "service": "kinmel"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "/api/v1/inventory/receive": {
+                    "post": {
+                        "tags": ["Inventory"],
+                        "summary": "Receive stock",
+                        "description": "Record incoming stock from suppliers.\n\n**Minimum Role:** Staff",
+                        "security": [{"BearerAuth": []}],
+                        "requestBody": {
+                            "required": true,
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "required": ["sku", "location_id", "quantity"],
+                                        "properties": {
+                                            "sku": {"type": "string", "example": "MILK-2L-WHOLE"},
+                                            "location_id": {"type": "string", "format": "uuid"},
+                                            "quantity": {"type": "integer", "minimum": 1, "example": 50},
+                                            "batch_number": {"type": "string", "example": "BATCH-001"},
+                                            "expiry_date": {"type": "string", "format": "date-time"},
+                                            "notes": {"type": "string"}
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {
+                            "201": {"description": "Stock received successfully"},
+                            "401": {"description": "Not authenticated"},
+                            "404": {"description": "Product or location not found"}
+                        }
+                    }
+                },
+                "/api/v1/inventory/adjust": {
+                    "post": {
+                        "tags": ["Inventory"],
+                        "summary": "Adjust stock",
+                        "description": "Manual stock adjustment.\n\n**Minimum Role:** Manager\n\n⚠️ Large adjustments (>50%) require confirmation.",
+                        "security": [{"BearerAuth": []}],
+                        "requestBody": {
+                            "required": true,
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "required": ["sku", "location_id", "new_quantity", "reason", "notes"],
+                                        "properties": {
+                                            "sku": {"type": "string", "example": "MILK-2L-WHOLE"},
+                                            "location_id": {"type": "string", "format": "uuid"},
+                                            "new_quantity": {"type": "integer", "minimum": 0, "example": 45},
+                                            "reason": {"type": "string", "enum": ["cycle_count", "audit_correction", "shrinkage"]},
+                                            "notes": {"type": "string", "minLength": 10},
+                                            "confirm_large_adjustment": {"type": "boolean", "default": false}
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "responses": {
+                            "200": {"description": "Stock adjusted successfully"},
+                            "403": {"description": "Insufficient permissions"}
+                        }
+                    }
+                },
+                "/api/v1/inventory/stock/{sku}": {
+                    "get": {
+                        "tags": ["Inventory"],
+                        "summary": "Get stock level",
+                        "description": "Get current stock level for a SKU.",
+                        "security": [{"BearerAuth": []}],
+                        "parameters": [
+                            {"name": "sku", "in": "path", "required": true, "schema": {"type": "string"}},
+                            {"name": "location_id", "in": "query", "schema": {"type": "string", "format": "uuid"}}
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "Stock level",
+                                "content": {
+                                    "application/json": {
+                                        "example": {
+                                            "sku": "MILK-2L-WHOLE",
+                                            "physical_stock": 50,
+                                            "buffer": 5,
+                                            "online_available": 45
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "/api/v1/admin/audit-log": {
+                    "get": {
+                        "tags": ["Admin"],
+                        "summary": "Query audit log",
+                        "description": "Query the immutable stock movement audit trail.\n\n**Minimum Role:** Manager",
+                        "security": [{"BearerAuth": []}],
+                        "parameters": [
+                            {"name": "sku", "in": "query", "schema": {"type": "string"}},
+                            {"name": "action_type", "in": "query", "schema": {"type": "string", "enum": ["receiving", "sale", "adjustment", "disposal"]}},
+                            {"name": "start_date", "in": "query", "schema": {"type": "string", "format": "date-time"}},
+                            {"name": "end_date", "in": "query", "schema": {"type": "string", "format": "date-time"}},
+                            {"name": "limit", "in": "query", "schema": {"type": "integer", "default": 50, "maximum": 500}},
+                            {"name": "offset", "in": "query", "schema": {"type": "integer", "default": 0}}
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "Audit log entries",
+                                "content": {
+                                    "application/json": {
+                                        "example": {
+                                            "entries": [
+                                                {
+                                                    "sku": "MILK-2L-WHOLE",
+                                                    "action_type": "sale",
+                                                    "quantity_delta": -2,
+                                                    "performed_by": "John Smith",
+                                                    "timestamp": "2024-01-15T14:30:00Z"
+                                                }
+                                            ],
+                                            "total": 150,
+                                            "has_more": true
+                                        }
+                                    }
+                                }
+                            },
+                            "403": {"description": "Insufficient permissions"}
+                        }
+                    }
+                },
+                "/api/v1/admin/audit-log/export.csv": {
+                    "get": {
+                        "tags": ["Admin"],
+                        "summary": "Export audit log as CSV",
+                        "description": "Download audit log as CSV file.\n\n**Minimum Role:** Manager",
+                        "security": [{"BearerAuth": []}],
+                        "parameters": [
+                            {"name": "start_date", "in": "query", "schema": {"type": "string", "format": "date-time"}},
+                            {"name": "end_date", "in": "query", "schema": {"type": "string", "format": "date-time"}}
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "CSV file download",
+                                "content": {"text/csv": {}}
+                            }
+                        }
+                    }
+                },
+                "/api/v1/admin/audit-log/stats": {
+                    "get": {
+                        "tags": ["Admin"],
+                        "summary": "Get audit statistics",
+                        "description": "Aggregated statistics from the audit log.\n\n**Minimum Role:** Manager",
+                        "security": [{"BearerAuth": []}],
+                        "responses": {
+                            "200": {
+                                "description": "Audit statistics",
+                                "content": {
+                                    "application/json": {
+                                        "example": {
+                                            "total_actions": 1500,
+                                            "total_units_increased": 5000,
+                                            "total_units_decreased": 4500,
+                                            "net_stock_change": 500
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "components": {
+                "securitySchemes": {
+                    "BearerAuth": {
+                        "type": "http",
+                        "scheme": "bearer",
+                        "bearerFormat": "JWT",
+                        "description": "JWT token from /auth/login"
+                    }
+                }
+            }
+        };
+        
+        Redoc.init(spec, {
+            scrollYOffset: 50,
+            hideHostname: false,
+            expandResponses: "200,201",
+            requiredPropsFirst: true,
+            sortPropsAlphabetically: false,
+            pathInMiddlePanel: true,
+            theme: {
+                colors: {
+                    primary: { main: '#58a6ff' }
+                },
+                typography: {
+                    fontSize: '15px',
+                    fontFamily: '"Roboto", sans-serif',
+                    headings: { fontFamily: '"Montserrat", sans-serif' }
+                },
+                sidebar: {
+                    backgroundColor: '#161b22',
+                    textColor: '#c9d1d9',
+                    activeTextColor: '#58a6ff'
+                },
+                rightPanel: {
+                    backgroundColor: '#0d1117'
+                }
+            }
+        }, document.getElementById('redoc-container'));
+    </script>
+</body>
+</html>

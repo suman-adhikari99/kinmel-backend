@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kinmel - Grocery Inventory Management System</title>
+    <meta name="description" content="Production-grade backend documentation for grocery store inventory management.">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="assets/css/style.css">
+    
+    <!-- Marked.js for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- Highlight.js for code syntax highlighting -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github-dark.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11"></script>
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <span class="logo">📦</span>
+            <div class="brand">
+                <h1>Kinmel</h1>
+                <span class="version">v1.0.0</span>
+            </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <h3>Getting Started</h3>
+                <ul>
+                    <li><a href="#overview" class="nav-link active" data-section="overview">Overview</a></li>
+                    <li><a href="#quick-start" class="nav-link" data-section="quick-start">Quick Start</a></li>
+                    <li><a href="#developer-guide" class="nav-link" data-section="developer-guide">Developer Guide</a></li>
+                </ul>
+            </div>
+            
+            <div class="nav-section">
+                <h3>Architecture</h3>
+                <ul>
+                    <li><a href="#domain-model" class="nav-link" data-section="domain-model">Domain Model</a></li>
+                    <li><a href="#authentication" class="nav-link" data-section="authentication">Authentication</a></li>
+                    <li><a href="#database" class="nav-link" data-section="database">Database</a></li>
+                </ul>
+            </div>
+            
+            <div class="nav-section">
+                <h3>API</h3>
+                <ul>
+                    <li><a href="api-reference.html" class="nav-link">API Reference</a></li>
+                    <li><a href="openapi.html" class="nav-link">OpenAPI Spec</a></li>
+                    <li><a href="#inventory-actions" class="nav-link" data-section="inventory-actions">Inventory Actions</a></li>
+                </ul>
+            </div>
+            
+            <div class="nav-section">
+                <h3>Operations</h3>
+                <ul>
+                    <li><a href="#background-tasks" class="nav-link" data-section="background-tasks">Background Tasks</a></li>
+                    <li><a href="#audit-system" class="nav-link" data-section="audit-system">Audit System</a></li>
+                    <li><a href="#deployment" class="nav-link" data-section="deployment">Deployment</a></li>
+                </ul>
+            </div>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <a href="https://github.com/kinmel/backend" class="github-link" target="_blank">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                </svg>
+                GitHub
+            </a>
+        </div>
+    </aside>
+    
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+        <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        <span class="mobile-title">Kinmel Docs</span>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+        <article class="content" id="content">
+            <!-- Content will be loaded here -->
+            <div class="loading">Loading documentation...</div>
+        </article>
+    </main>
+    
+    <!-- Scripts -->
+    <script src="assets/js/app.js"></script>
+</body>
+</html>

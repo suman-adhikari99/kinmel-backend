@@ -1,0 +1,31 @@
+# GitHub Pages Configuration
+# This file configures GitHub Pages to serve the docs folder
+
+title: Kinmel Documentation
+description: Production-grade grocery inventory management system
+baseurl: ""
+url: ""
+
+# Theme settings (using none - custom HTML)
+theme: null
+
+# Include these files
+include:
+  - index.html
+  - api-reference.html
+  - openapi.html
+  - assets
+  - "*.md"
+
+# Exclude from build
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+
+# Markdown settings
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge

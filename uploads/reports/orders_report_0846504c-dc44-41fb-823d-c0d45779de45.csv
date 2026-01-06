@@ -1,0 +1,21 @@
+order_id,customer,email,status,total,gst,created_at
+79001aaa-82ef-505b-892d-04fbab9ebf9c,Ava Patel,ava@example.com,new,15.37,1.4,2025-12-18T01:10:25.719224+00:00
+c8959b53-57cf-5206-8cfb-abc9d3e61add,Liam Chen,liam@example.com,preparing,26.32,1.85,2025-12-19T00:10:25.719224+00:00
+b9cd3fcc-6510-5927-88ca-f281a617473a,Noah Brown,noah@example.com,ready,27.47,2.5,2025-12-19T23:10:25.719224+00:00
+58606469-aa14-5ec5-acb3-c9209f23bf25,Mia Singh,mia@example.com,out_for_delivery,27.97,2.0,2025-12-20T22:10:25.719224+00:00
+163563ac-7bb3-5232-93a8-9affe6d4bd31,Ethan Park,ethan@example.com,completed,13.72,1.25,2025-12-21T21:10:25.719224+00:00
+96b37a85-42cc-5988-9d1f-92e29b718053,Zoe Taylor,zoe@example.com,cancelled,19.28,1.21,2025-12-22T20:10:25.719224+00:00
+2c847f16-7b58-5564-9d40-f26bbd6abf7c,Report Seed Customer 1,report-seed-1@example.com,ready,27.5,2.5,2025-12-14T01:10:50.711235+00:00
+0512c547-1690-5c43-9882-72edae92e1e4,Report Seed Customer 2,report-seed-2@example.com,completed,36.8,2.8,2025-12-15T01:10:50.711235+00:00
+98f26e18-00b0-5c44-98bd-cdf3703abd95,Report Seed Customer 3,report-seed-3@example.com,completed,34.1,3.1,2025-12-16T01:10:50.711235+00:00
+97dc143c-d705-5102-842d-7fef1a4cff1f,Report Seed Customer 4,report-seed-4@example.com,ready,43.4,3.4,2025-12-17T01:10:50.711235+00:00
+49317b7e-928f-5e2d-bdf7-b5f3e2e2307a,Report Seed Customer 5,report-seed-5@example.com,completed,40.7,3.7,2025-12-18T01:10:50.711235+00:00
+29c1bec3-1799-5923-9742-d50879282c43,Report Seed Customer 6,report-seed-6@example.com,completed,50.0,4.0,2025-12-19T01:10:50.711235+00:00
+426600bc-5251-5cfb-8bb8-ffb92ec9121b,Report Seed Customer 7,report-seed-7@example.com,ready,47.3,4.3,2025-12-20T01:10:50.711235+00:00
+5cb5ea1c-abab-540a-a01a-456241284097,Report Seed Customer 8,report-seed-8@example.com,completed,56.6,4.6,2025-12-21T01:10:50.711235+00:00
+d1f98d2f-33b1-55ee-aff7-d921d9930b38,Report Seed Customer 9,report-seed-9@example.com,completed,53.9,4.9,2025-12-22T01:10:50.711235+00:00
+3cec4afd-24aa-56e0-879d-b3347ae16f3d,Report Seed Customer 10,report-seed-10@example.com,ready,63.2,5.2,2025-12-23T01:10:50.711235+00:00
+dd3b3008-234d-53a3-ba6d-3e4f00da0464,Report Seed Customer 11,report-seed-11@example.com,completed,60.5,5.5,2025-12-24T01:10:50.711235+00:00
+d18b9d04-603f-5446-b5a6-2e39bf3334a4,Report Seed Customer 12,report-seed-12@example.com,completed,69.8,5.8,2025-12-25T01:10:50.711235+00:00
+0a4e57b6-5ab7-5fe0-883a-086871973a58,Report Seed Customer 13,report-seed-13@example.com,ready,67.1,6.1,2025-12-26T01:10:50.711235+00:00
+be4b330c-873f-50f8-a81e-d38cee764058,Report Seed Customer 14,report-seed-14@example.com,completed,76.4,6.4,2025-12-27T01:10:50.711235+00:00

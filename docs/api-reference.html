@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Reference - Kinmel</title>
+    <meta name="description" content="Quick API reference for Kinmel Inventory System">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Highlight.js -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github-dark.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11"></script>
+    
+    <style>
+        :root {
+            --color-bg: #0d1117;
+            --color-bg-secondary: #161b22;
+            --color-border: #30363d;
+            --color-text: #c9d1d9;
+            --color-text-muted: #8b949e;
+            --color-text-heading: #f0f6fc;
+            --color-primary: #58a6ff;
+            --color-success: #3fb950;
+            --color-warning: #d29922;
+            --color-danger: #f85149;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--color-bg);
+            color: var(--color-text);
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: var(--color-bg-secondary);
+            border-bottom: 1px solid var(--color-border);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header a {
+            color: var(--color-primary);
+            text-decoration: none;
+        }
+        
+        .header a:hover { text-decoration: underline; }
+        
+        .header .brand {
+            font-weight: 600;
+            color: var(--color-text-heading);
+            font-size: 18px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+        
+        h1 {
+            color: var(--color-text-heading);
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            color: var(--color-text-muted);
+            margin-bottom: 32px;
+        }
+        
+        h2 {
+            color: var(--color-text-heading);
+            font-size: 1.5rem;
+            margin-top: 48px;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--color-border);
+        }
+        
+        .endpoint {
+            background: var(--color-bg-secondary);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+        
+        .endpoint-header {
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .endpoint-header:hover {
+            background: var(--color-bg);
+        }
+        
+        .method {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .method-get { background: rgba(63, 185, 80, 0.2); color: var(--color-success); }
+        .method-post { background: rgba(88, 166, 255, 0.2); color: var(--color-primary); }
+        .method-put { background: rgba(210, 153, 34, 0.2); color: var(--color-warning); }
+        .method-delete { background: rgba(248, 81, 73, 0.2); color: var(--color-danger); }
+        
+        .endpoint-path {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: var(--color-text-heading);
+        }
+        
+        .endpoint-desc {
+            color: var(--color-text-muted);
+            font-size: 14px;
+            margin-left: auto;
+        }
+        
+        .endpoint-role {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            background: var(--color-bg);
+            color: var(--color-text-muted);
+        }
+        
+        .endpoint-body {
+            padding: 20px;
+            border-top: 1px solid var(--color-border);
+            display: none;
+        }
+        
+        .endpoint.open .endpoint-body {
+            display: block;
+        }
+        
+        .endpoint.open .endpoint-header {
+            background: var(--color-bg);
+        }
+        
+        .section-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: var(--color-text-muted);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        pre {
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 16px;
+            overflow-x: auto;
+            margin: 12px 0;
+        }
+        
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+        }
+        
+        .inline-code {
+            background: var(--color-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 14px;
+        }
+        
+        th, td {
+            padding: 10px 12px;
+            border: 1px solid var(--color-border);
+            text-align: left;
+        }
+        
+        th {
+            background: var(--color-bg);
+            font-weight: 600;
+            color: var(--color-text-heading);
+        }
+        
+        .base-url {
+            background: var(--color-bg-secondary);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .base-url code {
+            color: var(--color-success);
+        }
+        
+        .auth-note {
+            background: rgba(88, 166, 255, 0.1);
+            border-left: 4px solid var(--color-primary);
+            padding: 12px 16px;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <a href="index.html" class="brand">📦 Kinmel Docs</a>
+        <span style="color: var(--color-border);">|</span>
+        <a href="index.html">← Documentation</a>
+        <a href="openapi.html">OpenAPI Explorer</a>
+    </header>
+    
+    <div class="container">
+        <h1>API Reference</h1>
+        <p class="subtitle">Quick reference for all Kinmel API endpoints</p>
+        
+        <div class="base-url">
+            <strong>Base URL:</strong>
+            <code>http://localhost:8000/api/v1</code>
+        </div>
+        
+        <div class="auth-note">
+            🔐 <strong>Authentication Required:</strong> Include JWT token in header: 
+            <code class="inline-code">Authorization: Bearer &lt;token&gt;</code>
+        </div>
+        
+        <!-- Health -->
+        <h2>🏥 Health Checks</h2>
+        
+        <div class="endpoint">
+            <div class="endpoint-header" onclick="toggleEndpoint(this)">
+                <span class="method method-get">GET</span>
+                <span class="endpoint-path">/health</span>
+                <span class="endpoint-desc">Basic health check</span>
+            </div>
+            <div class="endpoint-body">
+                <div class="section-label">Response</div>
+                <pre><code class="language-json">{
+  "status": "healthy",
+  "service": "kinmel"
+}</code></pre>
+            </div>
+        </div>
+        
+        <!-- Inventory -->
+        <h2>📦 Inventory Operations</h2>
+        
+        <div class="endpoint">
+            <div class="endpoint-header" onclick="toggleEndpoint(this)">
+                <span class="method method-post">POST</span>
+                <span class="endpoint-path">/inventory/receive</span>
+                <span class="endpoint-desc">Receive stock from supplier</span>
+                <span class="endpoint-role">Staff+</span>
+            </div>
+            <div class="endpoint-body">
+                <div class="section-label">Request Body</div>
+                <pre><code class="language-json">{
+  "sku": "MILK-2L-WHOLE",
+  "location_id": "uuid",
+  "quantity": 50,
+  "batch_number": "BATCH-001",
+  "expiry_date": "2024-02-15T00:00:00Z",
+  "notes": "Weekly delivery"
+}</code></pre>
+                <div class="section-label">cURL Example</div>
+                <pre><code class="language-bash">curl -X POST localhost:8000/api/v1/inventory/receive \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"sku":"MILK-2L","location_id":"...","quantity":50}'</code></pre>
+            </div>
+        </div>
+        
+        <div class="endpoint">
+            <div class="endpoint-header" onclick="toggleEndpoint(this)">
+                <span class="method method-post">POST</span>
+                <span class="endpoint-path">/inventory/adjust</span>
+                <span class="endpoint-desc">Manual stock adjustment</span>
+                <span class="endpoint-role">Manager+</span>
+            </div>
+            <div class="endpoint-body">
+                <div class="section-label">Request Body</div>
+                <pre><code class="language-json">{
+  "sku": "MILK-2L-WHOLE",
+  "location_id": "uuid",
+  "new_quantity": 45,
+  "reason": "cycle_count",
+  "notes": "Cycle count found 5 missing",
+  "confirm_large_adjustment": false
+}</code></pre>
+                <div class="section-label">Valid Reasons</div>
+                <table>
+                    <tr><th>Reason</th><th>Description</th></tr>
+                    <tr><td><code>cycle_count</code></td><td>Physical count correction</td></tr>
+                    <tr><td><code>audit_correction</code></td><td>Auditor adjustment</td></tr>
+                    <tr><td><code>shrinkage</code></td><td>Unexplained loss</td></tr>
+                </table>
+            </div>
+        </div>
+        
+        <div class="endpoint">
+            <div class="endpoint-header" onclick="toggleEndpoint(this)">
+                <span class="method method-post">POST</span>
+                <span class="endpoint-path">/inventory/reserve</span>
+                <span class="endpoint-desc">Reserve stock for order</span>
+                <span class="endpoint-role">Staff+</span>
+            </div>
+            <div class="endpoint-body">
+                <div class="section-label">Request Body</div>
+                <pre><code class="language-json">{
+  "sku": "MILK-2L-WHOLE",
+  "location_id": "uuid",
+  "quantity": 5,
+  "order_id": "ONLINE-001"
+}</code></pre>
+            </div>
+        </div>
+        
+        <div class="endpoint">
+            <div class="endpoint-header" onclick="toggleEndpoint(this)">
+                <span class="method method-post">POST</span>
+                <span class="endpoint-path">/inventory/fulfill</span>
+                <span class="endpoint-desc">Fulfill order (sell stock)</span>
+                <span class="endpoint-role">Staff+</span>
+            </div>
+            <div class="endpoint-body">
+                <div class="section-label">Request Body</div>
+                <pre><code class="language-json">{
+  "sku": "MILK-2L-WHOLE",
+  "location_id": "uuid",
+  "quantity": 5,
+  "order_id": "ORD-001"
+}</code></pre>
+            </div>
+        </div>
+        
+        <div class="endpoint">
+            <div class="endpoint-header" onclick="toggleEndpoint(this)">
+                <span class="method method-get">GET</span>
+                <span class="endpoint-path">/inventory/stock/{sku}</span>
+                <span class="endpoint-desc">Get stock level</span>
+                <span class="endpoint-role">Staff+</span>
+            </div>
+            <div class="endpoint-body">
+                <div class="section-label">Query Parameters</div>
+                <table>
+                    <tr><th>Param</th><th>Type</th><th>Description</th></tr>
+                    <tr><td><code>location_id</code></td><td>uuid</td><td>Filter by location (optional)</td></tr>
+                </table>
+                <div class="section-label">Response</div>
+                <pre><code class="language-json">{
+  "sku": "MILK-2L-WHOLE",
+  "physical_stock": 50,
+  "buffer": 5,
+  "online_available": 45,
+  "reorder_point": 10,
+  "is_low_stock": false
+}</code></pre>
+            </div>
+        </div>
+        
+        <!-- Admin -->
+        <h2>🔐 Admin & Audit</h2>
+        
+        <div class="endpoint">
+            <div class="endpoint-header" onclick="toggleEndpoint(this)">
+                <span class="method method-get">GET</span>
+                <span class="endpoint-path">/admin/audit-log</span>
+                <span class="endpoint-desc">Query audit trail</span>
+                <span class="endpoint-role">Manager+</span>
+            </div>
+            <div class="endpoint-body">
+                <div class="section-label">Query Parameters</div>
+                <table>
+                    <tr><th>Param</th><th>Type</th><th>Description</th></tr>
+                    <tr><td><code>sku</code></td><td>string</td><td>Filter by product SKU</td></tr>
+                    <tr><td><code>action_type</code></td><td>enum</td><td>receiving, sale, adjustment, disposal</td></tr>
+                    <tr><td><code>start_date</code></td><td>datetime</td><td>Period start (ISO 8601)</td></tr>
+                    <tr><td><code>end_date</code></td><td>datetime</td><td>Period end</td></tr>
+                    <tr><td><code>performed_by</code></td><td>string</td><td>User name (partial match)</td></tr>
+                    <tr><td><code>limit</code></td><td>int</td><td>Max records (1-500)</td></tr>
+                    <tr><td><code>offset</code></td><td>int</td><td>Skip records</td></tr>
+                </table>
+                <div class="section-label">Response</div>
+                <pre><code class="language-json">{
+  "entries": [
+    {
+      "sku": "MILK-2L-WHOLE",
+      "action_type": "sale",
+      "quantity_delta": -2,
+      "quantity_before": 50,
+      "quantity_after": 48,
+      "performed_by": "John Smith",
+      "timestamp": "2024-01-15T14:30:00Z"
+    }
+  ],
+  "total": 150,
+  "has_more": true
+}</code></pre>
+            </div>
+        </div>
+        
+        <div class="endpoint">
+            <div class="endpoint-header" onclick="toggleEndpoint(this)">
+                <span class="method method-get">GET</span>
+                <span class="endpoint-path">/admin/audit-log/export.csv</span>
+                <span class="endpoint-desc">Export as CSV</span>
+                <span class="endpoint-role">Manager+</span>
+            </div>
+            <div class="endpoint-body">
+                <div class="section-label">cURL Example</div>
+                <pre><code class="language-bash">curl "localhost:8000/api/v1/admin/audit-log/export.csv?start_date=2024-01-01" \
+  -H "Authorization: Bearer $TOKEN" \
+  -o audit_export.csv</code></pre>
+            </div>
+        </div>
+        
+        <div class="endpoint">
+            <div class="endpoint-header" onclick="toggleEndpoint(this)">
+                <span class="method method-get">GET</span>
+                <span class="endpoint-path">/admin/audit-log/stats</span>
+                <span class="endpoint-desc">Aggregated statistics</span>
+                <span class="endpoint-role">Manager+</span>
+            </div>
+            <div class="endpoint-body">
+                <div class="section-label">Response</div>
+                <pre><code class="language-json">{
+  "total_actions": 1500,
+  "total_units_increased": 5000,
+  "total_units_decreased": 4500,
+  "net_stock_change": 500,
+  "by_action_type": [...],
+  "top_products": [...],
+  "top_users": [...]
+}</code></pre>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function toggleEndpoint(header) {
+            header.parentElement.classList.toggle('open');
+        }
+        
+        // Highlight all code blocks
+        document.querySelectorAll('pre code').forEach(block => {
+            hljs.highlightElement(block);
+        });
+    </script>
+</body>
+</html>
