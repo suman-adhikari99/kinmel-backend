@@ -1,11 +1,11 @@
 """
 Database Configuration
 ----------------------
-Async SQLAlchemy 2.0 setup with PostgreSQL via asyncpg.
+Async SQLAlchemy 2.0 setup with SQLite via aiosqlite.
 
 Design Decisions:
 1. Async for non-blocking I/O under load
-2. Connection pooling for predictable resource usage
+2. File-based SQLite for easy local development
 3. Session-per-request pattern for clean transaction boundaries
 4. Explicit transaction management (no autocommit surprises)
 """
@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import DeclarativeBase
 
 from src.core.config import get_settings
@@ -46,19 +47,16 @@ NAMING_CONVENTION = {
 # Engine Configuration
 # ─────────────────────────────────────────────────────────────────
 
+database_url = make_url(str(settings.database_url))
+connect_args = {"check_same_thread": False} if database_url.drivername.startswith("sqlite") else {}
+
 engine = create_async_engine(
-    str(settings.database_url),
+    database_url,
+    connect_args=connect_args,
     
     # Connection Pool Settings
     # ────────────────────────
-    # pool_size: Base number of persistent connections
-    # max_overflow: Extra connections allowed during peak load
-    # pool_timeout: Seconds to wait for a connection before raising error
-    # pool_recycle: Recreate connections after N seconds (prevents stale connections)
-    pool_size=settings.db_pool_size,
     pool_pre_ping=True,  # Verify connection is alive before using
-    max_overflow=settings.db_pool_overflow,
-    pool_timeout=settings.db_pool_timeout,
     pool_recycle=3600,  # Recycle connections every hour
     
     # Echo SQL in development only (never in production - security + noise)
@@ -166,4 +164,3 @@ async def close_db() -> None:
     Called at application shutdown.
     """
     await engine.dispose()
-

@@ -36,7 +36,6 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "20241214_0001"
@@ -56,7 +55,7 @@ def upgrade() -> None:
     op.create_table(
         "users",
         # Primary key
-        sa.Column("id", postgresql.UUID(as_uuid=False), primary_key=True),
+        sa.Column("id", sa.String(length=36), primary_key=True),
         
         # Timestamps
         sa.Column(
@@ -101,7 +100,7 @@ def upgrade() -> None:
     op.create_table(
         "products",
         # Primary key
-        sa.Column("id", postgresql.UUID(as_uuid=False), primary_key=True),
+        sa.Column("id", sa.String(length=36), primary_key=True),
         
         # Timestamps
         sa.Column(
@@ -183,7 +182,7 @@ def upgrade() -> None:
     op.create_table(
         "locations",
         # Primary key
-        sa.Column("id", postgresql.UUID(as_uuid=False), primary_key=True),
+        sa.Column("id", sa.String(length=36), primary_key=True),
         
         # Timestamps
         sa.Column(
@@ -228,7 +227,7 @@ def upgrade() -> None:
     op.create_table(
         "inventory_items",
         # Primary key
-        sa.Column("id", postgresql.UUID(as_uuid=False), primary_key=True),
+        sa.Column("id", sa.String(length=36), primary_key=True),
         
         # Timestamps
         sa.Column(
@@ -255,14 +254,14 @@ def upgrade() -> None:
         # Foreign keys
         sa.Column(
             "product_id",
-            postgresql.UUID(as_uuid=False),
+            sa.String(length=36),
             sa.ForeignKey("products.id", ondelete="RESTRICT"),
             nullable=False,
             comment="Cannot be changed after creation",
         ),
         sa.Column(
             "location_id",
-            postgresql.UUID(as_uuid=False),
+            sa.String(length=36),
             sa.ForeignKey("locations.id", ondelete="RESTRICT"),
             nullable=False,
         ),
@@ -317,7 +316,7 @@ def upgrade() -> None:
     op.create_table(
         "inventory_batches",
         # Primary key
-        sa.Column("id", postgresql.UUID(as_uuid=False), primary_key=True),
+        sa.Column("id", sa.String(length=36), primary_key=True),
         
         # Timestamps
         sa.Column(
@@ -337,7 +336,7 @@ def upgrade() -> None:
         # Foreign key
         sa.Column(
             "inventory_item_id",
-            postgresql.UUID(as_uuid=False),
+            sa.String(length=36),
             sa.ForeignKey("inventory_items.id", ondelete="CASCADE"),
             nullable=False,
         ),
@@ -374,7 +373,7 @@ def upgrade() -> None:
     op.create_table(
         "stock_movements",
         # Primary key
-        sa.Column("id", postgresql.UUID(as_uuid=False), primary_key=True),
+        sa.Column("id", sa.String(length=36), primary_key=True),
         
         # Timestamps (created_at only - movements are never updated)
         sa.Column(
@@ -395,20 +394,20 @@ def upgrade() -> None:
         # Foreign keys
         sa.Column(
             "inventory_item_id",
-            postgresql.UUID(as_uuid=False),
+            sa.String(length=36),
             sa.ForeignKey("inventory_items.id", ondelete="RESTRICT"),
             nullable=False,
         ),
         sa.Column(
             "user_id",
-            postgresql.UUID(as_uuid=False),
+            sa.String(length=36),
             sa.ForeignKey("users.id", ondelete="RESTRICT"),
             nullable=False,
             comment="Who performed this action",
         ),
         sa.Column(
             "batch_id",
-            postgresql.UUID(as_uuid=False),
+            sa.String(length=36),
             sa.ForeignKey("inventory_batches.id", ondelete="SET NULL"),
             nullable=True,
             comment="Which batch was affected (for perishables)",

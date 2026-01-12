@@ -4,8 +4,9 @@ Revenue Repository
 Database queries for revenue analytics.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import String, cast, func, select
 from sqlalchemy.exc import ProgrammingError
@@ -27,6 +28,24 @@ from src.modules.revenue.models import (
 
 class RevenueRepository:
     """Queries for revenue analytics."""
+
+    def _period_expression(self, interval: str):
+        """SQLite-friendly bucket expression (day/week/month)."""
+        if interval == "month":
+            return func.strftime("%Y-%m", Order.created_at)
+        if interval == "week":
+            return func.strftime("%Y-%W", Order.created_at)
+        return func.strftime("%Y-%m-%d", Order.created_at)
+
+    def _period_to_datetime(self, period_key: str, interval: str, tz: ZoneInfo) -> datetime:
+        """Convert aggregated period keys back into timezone-aware datetimes."""
+        if interval == "month":
+            parsed = datetime.strptime(f"{period_key}-01", "%Y-%m-%d")
+        elif interval == "week":
+            parsed = datetime.strptime(f"{period_key}-1", "%Y-%W-%w")
+        else:
+            parsed = datetime.strptime(period_key, "%Y-%m-%d")
+        return parsed.replace(tzinfo=UTC).astimezone(tz)
 
     def _is_missing_table(self, exc: Exception) -> bool:
         if not isinstance(exc, ProgrammingError):
@@ -83,8 +102,8 @@ class RevenueRepository:
         interval: str,
         timezone: str,
     ) -> list[dict]:
-        tz_timestamp = func.timezone(timezone, Order.created_at)
-        period = func.date_trunc(interval, tz_timestamp).label("period")
+        tz = ZoneInfo(timezone)
+        period = self._period_expression(interval).label("period")
         revenue_query = (
             select(
                 period,
@@ -124,7 +143,7 @@ class RevenueRepository:
         for period_value in periods:
             rows.append(
                 {
-                    "period": period_value,
+                    "period": self._period_to_datetime(period_value, interval, tz),
                     "revenue": revenue_rows.get(period_value, Decimal("0")),
                     "expenses": expense_rows.get(period_value, Decimal("0")),
                 }
@@ -140,8 +159,8 @@ class RevenueRepository:
         timezone: str,
         types: list[str] | None = None,
     ) -> list[dict]:
-        tz_timestamp = func.timezone(timezone, Order.created_at)
-        period = func.date_trunc("day", tz_timestamp).label("period")
+        tz = ZoneInfo(timezone)
+        period = func.strftime("%Y-%m-%d", Order.created_at).label("period")
         query = (
             select(
                 period,
@@ -157,7 +176,7 @@ class RevenueRepository:
         result = await session.execute(query)
         return [
             {
-                "period": row.period,
+                "period": self._period_to_datetime(row.period, "day", tz),
                 "order_type": row.order_type,
                 "revenue": Decimal(str(row.revenue or 0)),
             }

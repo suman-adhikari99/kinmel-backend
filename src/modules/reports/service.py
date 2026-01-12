@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta, time
 from decimal import Decimal
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Iterable
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
@@ -37,6 +37,15 @@ def _parse_dates(start_date: str, end_date: str, timezone: str | None) -> tuple[
     start_dt = datetime.combine(start, time.min, tzinfo=tz).astimezone(UTC)
     end_dt = datetime.combine(end, time.max, tzinfo=tz).astimezone(UTC)
     return start_dt, end_dt
+
+
+def _normalize_bucket_value(value: Any) -> str:
+    """Convert grouped date bucket values into ISO strings."""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    return str(value)
 
 
 def _period_label(start_dt: datetime, end_dt: datetime) -> str:
@@ -201,11 +210,11 @@ class ReportsService:
         start_dt: datetime,
         end_dt: datetime,
     ) -> Iterable[dict]:
-        if report_id == "sales":
-            date_bucket = func.date_trunc("day", Order.created_at)
+        if report_id in {"sales", "xero"}:
+            date_bucket = func.strftime("%Y-%m-%d", Order.created_at).label("date_bucket")
             result = await session.execute(
                 select(
-                    date_bucket.label("date"),
+                    date_bucket,
                     func.coalesce(func.sum(Order.total), 0).label("total_sales"),
                     func.coalesce(func.sum(Order.gst), 0).label("gst"),
                     func.count(Order.id).label("orders"),
@@ -214,37 +223,18 @@ class ReportsService:
                 .group_by(date_bucket)
                 .order_by(date_bucket)
             )
-            return [
-                {
-                    "date": row.date.date().isoformat(),
-                    "total_sales": float(row.total_sales or 0),
-                    "gst": float(row.gst or 0),
-                    "orders": int(row.orders or 0),
-                }
-                for row in result
-            ]
-        if report_id == "xero":
-            date_bucket = func.date_trunc("day", Order.created_at)
-            result = await session.execute(
-                select(
-                    date_bucket.label("date"),
-                    func.coalesce(func.sum(Order.total), 0).label("total_sales"),
-                    func.coalesce(func.sum(Order.gst), 0).label("gst"),
-                    func.count(Order.id).label("orders"),
+            rows = []
+            for row in result:
+                date_str = _normalize_bucket_value(row.date_bucket)
+                rows.append(
+                    {
+                        "date": date_str,
+                        "total_sales": float(row.total_sales or 0),
+                        "gst": float(row.gst or 0),
+                        "orders": int(row.orders or 0),
+                    }
                 )
-                .where(Order.created_at >= start_dt, Order.created_at <= end_dt)
-                .group_by(date_bucket)
-                .order_by(date_bucket)
-            )
-            return [
-                {
-                    "date": row.date.date().isoformat(),
-                    "total_sales": float(row.total_sales or 0),
-                    "gst": float(row.gst or 0),
-                    "orders": int(row.orders or 0),
-                }
-                for row in result
-            ]
+            return rows
         if report_id == "orders":
             result = await session.execute(
                 select(Order).where(Order.created_at >= start_dt, Order.created_at <= end_dt)

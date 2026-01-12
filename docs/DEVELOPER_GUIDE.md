@@ -11,7 +11,7 @@ python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 
 # 2. Start dependencies
-docker-compose up -d postgres redis
+docker-compose up -d redis
 
 # 3. Setup database
 python scripts/db.py migrate

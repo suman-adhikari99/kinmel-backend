@@ -44,7 +44,7 @@ Kinmel is a production-grade inventory management system designed for grocery st
 | **Language** | Python 3.11+ |
 | **Framework** | FastAPI 0.109 |
 | **ORM** | SQLAlchemy 2.0 (async) |
-| **Database** | PostgreSQL 15+ |
+| **Database** | SQLite (aiosqlite) |
 | **Migrations** | Alembic 1.13 |
 | **Validation** | Pydantic v2 |
 | **Background Jobs** | Celery 5.3 + Redis |
@@ -73,8 +73,8 @@ Kinmel is a production-grade inventory management system designed for grocery st
         ┌────────────────┼────────────────┐
         ▼                ▼                ▼
    ┌─────────┐     ┌─────────┐     ┌─────────┐
-   │PostgreSQL│     │  Redis  │     │ Celery  │
-   │ Database │     │ Broker  │     │ Workers │
+   │ SQLite  │     │  Redis  │     │ Celery  │
+   │ Database│     │ Broker  │     │ Workers │
    └─────────┘     └─────────┘     └─────────┘
 ```
 
@@ -145,7 +145,7 @@ backend-kinmel/
 ### Prerequisites
 
 - Python 3.11+
-- PostgreSQL 15+
+- SQLite (included with Python; aiosqlite driver is installed via requirements)
 - Redis 7+
 
 ### Setup
@@ -164,14 +164,7 @@ pip install -r requirements.txt
 
 # Configure environment
 cp .env.example .env
-# Edit .env with your database credentials
-
-# Install via Homebrew
-# brew install postgresql@15
-# brew services start postgresql@15
-
-# # Create database
-# createdb kinmel
+# Edit .env if you want a custom SQLite file path (defaults to ./kinmel.db)
 # Run migrations
 python scripts/db.py migrate
 
@@ -1152,10 +1145,10 @@ async def db_session():
 ### Development Workflow
 
 ```bash
-# 1. Start PostgreSQL and Redis
-docker-compose up -d postgres redis
+# 1. Start Redis (database is local SQLite file)
+docker-compose up -d redis
 
-# 2. Run migrations
+# 2. Run migrations (creates/updates ./kinmel.db)
 python scripts/db.py migrate
 
 # 3. Seed test data
@@ -1197,7 +1190,7 @@ DEBUG=true                       # Enable debug mode
 SECRET_KEY=your-secret-key-here  # JWT signing key (min 32 chars)
 
 # Database
-DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/kinmel
+DATABASE_URL=sqlite+aiosqlite:///./kinmel.db
 DB_POOL_SIZE=10
 DB_POOL_OVERFLOW=20
 

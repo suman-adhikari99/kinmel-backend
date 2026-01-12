@@ -38,6 +38,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.engine import make_url
 
 from src.core.config import get_settings
 from src.core.database import async_session_factory, engine
@@ -1254,9 +1255,8 @@ async def main(args: argparse.Namespace) -> int:
     logger.info("Kinmel Database Seeder")
     logger.info("=" * 60)
     logger.info(f"Environment: {settings.app_env}")
-    db_hosts = settings.database_url.hosts()
-    db_host = db_hosts[0]["host"] if db_hosts else "unknown"
-    logger.info(f"Database: {db_host}{settings.database_url.path}")
+    url = make_url(str(settings.database_url))
+    logger.info(f"Database: {url.render_as_string(hide_password=True)}")
     
     async with async_session_factory() as session:
         seeder = DatabaseSeeder(session)

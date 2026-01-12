@@ -14,7 +14,7 @@ Why Pydantic Settings?
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, PostgresDsn, RedisDsn, field_validator
+from pydantic import Field, RedisDsn, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -56,13 +56,13 @@ class Settings(BaseSettings):
     )
     
     # ─────────────────────────────────────────────────────────────
-    # Database (PostgreSQL)
+    # Database (SQLite)
     # ─────────────────────────────────────────────────────────────
-    database_url: PostgresDsn = Field(
-        default="postgresql+asyncpg://postgres:postgres@localhost:5432/kinmel"
+    database_url: str = Field(
+        default="sqlite+aiosqlite:///./kinmel.db"
     )
-    db_pool_size: int = Field(default=10, ge=5, le=50)
-    db_pool_overflow: int = Field(default=20, ge=0, le=100)
+    db_pool_size: int = Field(default=5, ge=1, le=50)
+    db_pool_overflow: int = Field(default=10, ge=0, le=100)
     db_pool_timeout: int = Field(default=30, ge=10, le=120)
     
     # ─────────────────────────────────────────────────────────────

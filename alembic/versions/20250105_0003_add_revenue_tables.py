@@ -9,7 +9,6 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
 
 revision: str = "20250105_0003"
 down_revision: Union[str, None] = "20250105_0002"
@@ -20,10 +19,10 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.create_table(
         "revenue_payments",
-        sa.Column("id", postgresql.UUID(as_uuid=False), primary_key=True),
+        sa.Column("id", sa.String(length=36), primary_key=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now(), nullable=False),
-        sa.Column("order_id", postgresql.UUID(as_uuid=False), nullable=False),
+        sa.Column("order_id", sa.String(length=36), nullable=False),
         sa.Column("method", sa.String(30), nullable=False),
         sa.Column("status", sa.String(20), nullable=False, server_default="completed"),
         sa.Column("amount", sa.Numeric(12, 2), nullable=False),
@@ -36,7 +35,7 @@ def upgrade() -> None:
 
     op.create_table(
         "revenue_payouts",
-        sa.Column("id", postgresql.UUID(as_uuid=False), primary_key=True),
+        sa.Column("id", sa.String(length=36), primary_key=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now(), nullable=False),
         sa.Column("payout_at", sa.String(30), nullable=False),
@@ -49,7 +48,7 @@ def upgrade() -> None:
 
     op.create_table(
         "revenue_adjustments",
-        sa.Column("id", postgresql.UUID(as_uuid=False), primary_key=True),
+        sa.Column("id", sa.String(length=36), primary_key=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now(), nullable=False),
         sa.Column("adjustment_type", sa.String(30), nullable=False),
@@ -61,7 +60,7 @@ def upgrade() -> None:
 
     op.create_table(
         "business_profile",
-        sa.Column("id", postgresql.UUID(as_uuid=False), primary_key=True),
+        sa.Column("id", sa.String(length=36), primary_key=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now(), nullable=False),
         sa.Column("legal_name", sa.String(200), nullable=False),

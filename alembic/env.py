@@ -1,10 +1,10 @@
 """
 Alembic Environment Configuration
 ---------------------------------
-Async migration support for SQLAlchemy 2.0 + asyncpg.
+Async migration support for SQLAlchemy 2.0 + aiosqlite.
 
 Key Features:
-1. Async migrations using asyncpg
+1. Async migrations using aiosqlite
 2. Imports all models for autogenerate detection
 3. Uses project's database settings
 4. Supports both online (connected) and offline (SQL script) modes
@@ -119,11 +119,11 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         # Include schema in output for clarity
-        include_schemas=True,
+        include_schemas=False,  # SQLite doesn't support schemas
         # Use our filter
         include_object=include_object,
         # Render CHECK constraints inline
-        render_as_batch=False,
+        render_as_batch=True,  # Required for SQLite ALTER TABLE support
     )
 
     with context.begin_transaction():
@@ -146,9 +146,9 @@ def do_run_migrations(connection: Connection) -> None:
         # Compare server defaults
         compare_server_default=True,
         # Render CHECK constraints properly
-        render_as_batch=False,
+        render_as_batch=True,  # Required for SQLite ALTER TABLE support
         # Include schema changes
-        include_schemas=True,
+        include_schemas=False,  # SQLite doesn't support schemas
     )
 
     with context.begin_transaction():

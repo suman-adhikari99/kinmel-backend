@@ -36,7 +36,7 @@ def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
 # ─────────────────────────────────────────────────────────────────
 
 # Use SQLite for fast unit tests
-# For integration tests, use Testcontainers with PostgreSQL
+# For integration tests, you can still point to a database Testcontainer if needed
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
@@ -46,7 +46,7 @@ async def test_db() -> AsyncGenerator[AsyncSession, None]:
     Create a fresh database for each test.
     
     Uses SQLite in-memory for speed.
-    For integration tests, switch to Testcontainers PostgreSQL.
+    For integration tests, switch to a Testcontainers database if needed.
     """
     engine = create_async_engine(
         TEST_DATABASE_URL,
@@ -123,4 +123,3 @@ def admin_token() -> str:
 def auth_headers(token: str) -> dict[str, str]:
     """Create authorization headers from a token."""
     return {"Authorization": f"Bearer {token}"}
-

@@ -16,7 +16,6 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "20250105_0001"
@@ -29,7 +28,7 @@ def upgrade() -> None:
     """Create order management tables."""
     op.create_table(
         "orders",
-        sa.Column("id", postgresql.UUID(as_uuid=False), primary_key=True),
+        sa.Column("id", sa.String(length=36), primary_key=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -73,7 +72,7 @@ def upgrade() -> None:
 
     op.create_table(
         "order_items",
-        sa.Column("id", postgresql.UUID(as_uuid=False), primary_key=True),
+        sa.Column("id", sa.String(length=36), primary_key=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -87,7 +86,7 @@ def upgrade() -> None:
             onupdate=sa.func.now(),
             nullable=False,
         ),
-        sa.Column("order_id", postgresql.UUID(as_uuid=False), nullable=False),
+        sa.Column("order_id", sa.String(length=36), nullable=False),
         sa.Column("product_sku", sa.String(50), nullable=True),
         sa.Column("name", sa.String(200), nullable=False),
         sa.Column("quantity", sa.Numeric(12, 2), nullable=False),
@@ -99,7 +98,7 @@ def upgrade() -> None:
 
     op.create_table(
         "order_item_substitutions",
-        sa.Column("id", postgresql.UUID(as_uuid=False), primary_key=True),
+        sa.Column("id", sa.String(length=36), primary_key=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -113,7 +112,7 @@ def upgrade() -> None:
             onupdate=sa.func.now(),
             nullable=False,
         ),
-        sa.Column("order_item_id", postgresql.UUID(as_uuid=False), nullable=False),
+        sa.Column("order_item_id", sa.String(length=36), nullable=False),
         sa.Column("original_item_id", sa.String(50), nullable=True),
         sa.Column("original_name", sa.String(200), nullable=False),
         sa.Column("original_price", sa.Numeric(12, 2), nullable=False),
@@ -132,7 +131,7 @@ def upgrade() -> None:
 
     op.create_table(
         "order_status_history",
-        sa.Column("id", postgresql.UUID(as_uuid=False), primary_key=True),
+        sa.Column("id", sa.String(length=36), primary_key=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -146,7 +145,7 @@ def upgrade() -> None:
             onupdate=sa.func.now(),
             nullable=False,
         ),
-        sa.Column("order_id", postgresql.UUID(as_uuid=False), nullable=False),
+        sa.Column("order_id", sa.String(length=36), nullable=False),
         sa.Column("status", sa.String(30), nullable=False),
         sa.Column("changed_by", sa.String(36), nullable=True),
         sa.ForeignKeyConstraint(["order_id"], ["orders.id"], ondelete="CASCADE"),
@@ -156,7 +155,7 @@ def upgrade() -> None:
 
     op.create_table(
         "order_contact_attempts",
-        sa.Column("id", postgresql.UUID(as_uuid=False), primary_key=True),
+        sa.Column("id", sa.String(length=36), primary_key=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -170,7 +169,7 @@ def upgrade() -> None:
             onupdate=sa.func.now(),
             nullable=False,
         ),
-        sa.Column("order_id", postgresql.UUID(as_uuid=False), nullable=False),
+        sa.Column("order_id", sa.String(length=36), nullable=False),
         sa.Column("channel", sa.String(20), nullable=False),
         sa.Column("template_id", sa.String(100), nullable=True),
         sa.Column("notes", sa.Text(), nullable=True),

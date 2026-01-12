@@ -14,8 +14,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import DateTime, Integer, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import DateTime, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.core.database import Base
@@ -120,7 +119,7 @@ class BaseModel(Base, TimestampMixin):
     __abstract__ = True
     
     id: Mapped[str] = mapped_column(
-        UUID(as_uuid=False),
+        String(36),
         primary_key=True,
         default=generate_uuid,
     )

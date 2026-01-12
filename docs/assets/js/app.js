@@ -12,7 +12,7 @@ const SECTIONS = {
 <div class="hero-badges">
     <span class="hero-badge">🐍 Python 3.11+</span>
     <span class="hero-badge">⚡ FastAPI</span>
-    <span class="hero-badge">🗃️ PostgreSQL</span>
+    <span class="hero-badge">🗃️ SQLite</span>
     <span class="hero-badge">📦 SQLAlchemy 2.0</span>
 </div>
 
@@ -35,7 +35,7 @@ Kinmel is a production-grade inventory management system designed for grocery st
 | **Language** | Python 3.11+ |
 | **Framework** | FastAPI 0.109 |
 | **ORM** | SQLAlchemy 2.0 (async) |
-| **Database** | PostgreSQL 15+ |
+| **Database** | SQLite (aiosqlite) |
 | **Migrations** | Alembic 1.13 |
 | **Validation** | Pydantic v2 |
 | **Background Jobs** | Celery 5.3 + Redis |
@@ -74,7 +74,7 @@ Get Kinmel running locally in under 10 minutes.
 ## Prerequisites
 
 - Python 3.11+
-- PostgreSQL 15+
+- SQLite (no external install needed)
 - Redis 7+
 
 ## Installation
@@ -426,7 +426,7 @@ curl localhost:8000/api/v1/inventory/stock/MILK-2L \\
     'database': `
 # Database & Migrations
 
-PostgreSQL with Alembic migrations.
+SQLite (aiosqlite) with Alembic migrations.
 
 ## Migration Commands
 
@@ -722,7 +722,7 @@ Running Kinmel in production.
 # Required
 APP_ENV=production
 SECRET_KEY=<generate-secure-key>
-DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/db
+DATABASE_URL=sqlite+aiosqlite:///./kinmel.db
 REDIS_URL=redis://host:6379/0
 
 # Optional

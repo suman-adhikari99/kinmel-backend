@@ -9,7 +9,6 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "20250105_0002"
@@ -22,7 +21,7 @@ def upgrade() -> None:
     """Create order export jobs table."""
     op.create_table(
         "order_export_jobs",
-        sa.Column("id", postgresql.UUID(as_uuid=False), primary_key=True),
+        sa.Column("id", sa.String(length=36), primary_key=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),

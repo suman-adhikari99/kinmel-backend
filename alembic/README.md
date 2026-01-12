@@ -128,7 +128,7 @@ All constraints use explicit names (defined in `src/core/database.py`):
 def upgrade():
     op.create_table(
         "suppliers",
-        sa.Column("id", postgresql.UUID(as_uuid=False), primary_key=True),
+        sa.Column("id", sa.String(length=36), primary_key=True),
         sa.Column("name", sa.String(200), nullable=False),
         # ... more columns
     )
@@ -159,7 +159,7 @@ def upgrade():
     # 1. Add as nullable
     op.add_column(
         "products",
-        sa.Column("supplier_id", postgresql.UUID(as_uuid=False), nullable=True),
+        sa.Column("supplier_id", sa.String(length=36), nullable=True),
     )
     
     # 2. Populate with default (data migration)
@@ -172,20 +172,16 @@ def downgrade():
     op.drop_column("products", "supplier_id")
 ```
 
-### Create index concurrently (large tables)
+### Create an index
 
 ```python
 from alembic import op
 
 def upgrade():
-    # Use execute for CONCURRENTLY (not supported by op.create_index)
-    op.execute(
-        "CREATE INDEX CONCURRENTLY ix_stock_movements_date "
-        "ON stock_movements (created_at)"
-    )
+    op.create_index("ix_stock_movements_date", "stock_movements", ["created_at"])
 
 def downgrade():
-    op.drop_index("ix_stock_movements_date")
+    op.drop_index("ix_stock_movements_date", table_name="stock_movements")
 ```
 
 ## Environment-Specific Notes
