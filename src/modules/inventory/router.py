@@ -59,6 +59,7 @@ from src.modules.inventory.schemas import (
     InventoryListItemResponse,
     InventorySummaryResponse,
     InventoryItemResponse,
+    LocationSummary,
     LowStockAlertResponse,
     MovementHistoryResponse,
     ReceiveStockRequest,
@@ -80,6 +81,7 @@ from src.modules.inventory.service import (
     ReservationInput,
     inventory_service,
 )
+from src.modules.inventory.models import LocationType
 from src.modules.products.category_repository import category_repository
 
 logger = get_logger(__name__)
@@ -225,6 +227,29 @@ async def get_inventory_summary(
         location_id=location_id,
     )
     return InventorySummaryResponse(**summary)
+
+
+@router.get(
+    "/locations",
+    response_model=list[LocationSummary],
+    summary="List locations",
+    description="List active inventory locations for POS checkout.",
+    dependencies=[RequireStaff],
+)
+async def list_locations(
+    db: DbSession,
+    code: Annotated[str | None, Query(description="Filter by location code")] = None,
+    location_type: Annotated[LocationType | None, Query(description="Filter by location type")] = None,
+) -> list[LocationSummary]:
+    try:
+        if code:
+            location = await inventory_service.get_location_by_code(db, code)
+            return [LocationSummary.model_validate(location)]
+        locations = await inventory_service.list_locations(db, location_type=location_type)
+        return [LocationSummary.model_validate(location) for location in locations]
+    except Exception as e:
+        handle_service_error(e)
+        raise
 
 
 @router.get(

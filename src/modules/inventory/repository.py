@@ -37,6 +37,7 @@ from src.core.exceptions import (
     NotFoundError,
 )
 from src.core.logging import LoggerMixin
+from src.core.models import generate_uuid
 from src.modules.inventory.models import (
     InventoryBatch,
     InventoryItem,
@@ -109,6 +110,7 @@ class InventoryRepository(LoggerMixin):
         location_id: str,
         *,
         for_update: bool = False,
+        include_inactive: bool = False,
     ) -> InventoryItem | None:
         """
         Get inventory item by SKU and location.
@@ -131,10 +133,11 @@ class InventoryRepository(LoggerMixin):
             .where(
                 Product.sku == sku,
                 InventoryItem.location_id == location_id,
-                InventoryItem.is_active == True,
                 Product.is_active == True,
             )
         )
+        if not include_inactive:
+            query = query.where(InventoryItem.is_active == True)
         
         if for_update:
             # Pessimistic lock - avoid outer join locks by using selectinload
@@ -391,6 +394,54 @@ class InventoryRepository(LoggerMixin):
         )
         
         return item
+
+    async def create_if_missing(
+        self,
+        session: AsyncSession,
+        *,
+        product_id: str,
+        location_id: str,
+        physical_stock: int = 0,
+        buffer: int = 0,
+        reorder_point: int = 0,
+        max_stock: int | None = None,
+    ) -> bool:
+        """
+        Create an inventory item if it does not already exist.
+
+        Uses a safe upsert to avoid raising on concurrent inserts.
+
+        Returns:
+            True if created, False if an item already exists.
+        """
+        values = {
+            "id": generate_uuid(),
+            "product_id": product_id,
+            "location_id": location_id,
+            "physical_stock": physical_stock,
+            "buffer": buffer,
+            "reorder_point": reorder_point,
+            "max_stock": max_stock,
+            "version": 1,
+            "is_active": True,
+        }
+        bind = session.get_bind()
+        dialect_name = bind.dialect.name if bind else "postgresql"
+        if dialect_name == "sqlite":
+            from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+
+            stmt = sqlite_insert(InventoryItem).values(**values).on_conflict_do_nothing(
+                index_elements=["product_id", "location_id"],
+            )
+        else:
+            from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+            stmt = pg_insert(InventoryItem).values(**values).on_conflict_do_nothing(
+                index_elements=["product_id", "location_id"],
+            )
+
+        result = await session.execute(stmt)
+        return result.rowcount == 1
     
     async def update_stock_optimistic(
         self,
@@ -777,6 +828,19 @@ class InventoryRepository(LoggerMixin):
             .order_by(Location.code)
         )
         
+        result = await session.execute(query)
+        return result.scalars().all()
+
+    async def list_locations(
+        self,
+        session: AsyncSession,
+        *,
+        location_type: LocationType | None = None,
+    ) -> Sequence[Location]:
+        query = select(Location).where(Location.is_active == True)
+        if location_type:
+            query = query.where(Location.location_type == location_type)
+        query = query.order_by(Location.code)
         result = await session.execute(query)
         return result.scalars().all()
 

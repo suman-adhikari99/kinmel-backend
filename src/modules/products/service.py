@@ -14,13 +14,14 @@ from decimal import Decimal
 from typing import Sequence
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.core.exceptions import NotFoundError, ValidationError
 from src.core.logging import LoggerMixin
 from src.modules.inventory.models import Location, MovementReason
-from src.modules.products.models import DEFAULT_CATEGORY, Product, ProductStatus
+from src.modules.products.models import DEFAULT_CATEGORY, Product, ProductBarcode, ProductStatus
 from src.modules.products.repository import product_repository
 from src.modules.products.category_repository import category_repository
 
@@ -38,6 +39,8 @@ class CreateProductInput:
     cost_price: Decimal | None = None
     tax_rate: Decimal = Decimal("0.0")
     barcode: str | None = None
+    barcodes: list[str] | None = None
+    primary_barcode: str | None = None
     unit_of_measure: str = "each"
     pack_size: int = 1
     is_perishable: bool = False
@@ -49,7 +52,6 @@ class CreateProductInput:
     status: ProductStatus = ProductStatus.ACTIVE
     featured: bool = False
     priority: int = 0
-    stock: int | None = None
     user_id: str | None = None
 
 
@@ -65,6 +67,8 @@ class UpdateProductInput:
     cost_price: Decimal | None = None
     tax_rate: Decimal | None = None
     barcode: str | None = None
+    barcodes: list[str] | None = None
+    primary_barcode: str | None = None
     unit_of_measure: str | None = None
     pack_size: int | None = None
     is_perishable: bool | None = None
@@ -76,7 +80,6 @@ class UpdateProductInput:
     status: ProductStatus | None = None
     featured: bool | None = None
     priority: int | None = None
-    stock: int | None = None
     user_id: str | None = None
 
 
@@ -89,6 +92,150 @@ class ProductService(LoggerMixin):
             return True
         except ValueError:
             return False
+
+    def _dedupe_barcodes(self, barcodes: list[str]) -> list[str]:
+        seen = set()
+        deduped: list[str] = []
+        for barcode in barcodes:
+            if barcode in seen:
+                raise ValidationError(
+                    staff_message=f"Duplicate barcode '{barcode}' in request",
+                    details={"field": "barcodes", "value": barcode},
+                )
+            seen.add(barcode)
+            deduped.append(barcode)
+        return deduped
+
+    async def _ensure_barcodes_loaded(
+        self,
+        session: AsyncSession,
+        product: Product,
+    ) -> None:
+        if "barcodes" not in product.__dict__:
+            await session.refresh(product, ["barcodes"])
+
+    def resolve_barcodes(self, product: Product) -> tuple[str | None, list[str]]:
+        barcodes: list[str] = []
+        primary: str | None = None
+
+        for record in product.barcodes or []:
+            if not record.barcode:
+                continue
+            barcodes.append(record.barcode)
+            if record.is_primary:
+                primary = record.barcode
+
+        if not primary and product.barcode:
+            primary = product.barcode
+
+        if barcodes:
+            unique = sorted(set(barcodes))
+            if primary and primary in unique:
+                unique.remove(primary)
+                ordered = [primary] + unique
+            else:
+                ordered = unique
+            return primary, ordered
+
+        if product.barcode:
+            return product.barcode, [product.barcode]
+
+        return None, []
+
+    def _resolve_barcode_create(
+        self,
+        *,
+        barcode: str | None,
+        barcodes: list[str] | None,
+        primary_barcode: str | None,
+    ) -> tuple[list[str], str | None]:
+        if barcode and barcodes:
+            raise ValidationError(
+                staff_message="Use either barcode or barcodes, not both",
+                details={"field": "barcode"},
+            )
+        if barcode and primary_barcode:
+            raise ValidationError(
+                staff_message="primary_barcode cannot be used with barcode",
+                details={"field": "primary_barcode"},
+            )
+        values = barcodes if barcodes is not None else ([barcode] if barcode else [])
+        if not values:
+            return [], None
+        values = self._dedupe_barcodes(values)
+        if primary_barcode and primary_barcode not in values:
+            raise ValidationError(
+                staff_message="primary_barcode must be included in barcodes",
+                details={"field": "primary_barcode", "value": primary_barcode},
+            )
+        return values, primary_barcode or values[0]
+
+    def _resolve_barcode_update(
+        self,
+        input_data: UpdateProductInput,
+    ) -> tuple[list[str] | None, str | None]:
+        if input_data.barcode:
+            if input_data.barcodes is not None or input_data.primary_barcode is not None:
+                raise ValidationError(
+                    staff_message="Use either barcode or barcodes, not both",
+                    details={"field": "barcode"},
+                )
+            return [input_data.barcode], input_data.barcode
+        if input_data.barcodes is not None:
+            values = self._dedupe_barcodes(input_data.barcodes)
+            if input_data.primary_barcode and input_data.primary_barcode not in values:
+                raise ValidationError(
+                    staff_message="primary_barcode must be included in barcodes",
+                    details={"field": "primary_barcode", "value": input_data.primary_barcode},
+                )
+            primary = input_data.primary_barcode or (values[0] if values else None)
+            if primary and not values:
+                raise ValidationError(
+                    staff_message="primary_barcode cannot be set without barcodes",
+                    details={"field": "primary_barcode", "value": primary},
+                )
+            return values, primary
+        if input_data.primary_barcode is not None:
+            return None, input_data.primary_barcode
+        return None, None
+
+    async def _reassign_barcodes(
+        self,
+        session: AsyncSession,
+        *,
+        product: Product,
+        records: Sequence[ProductBarcode],
+    ) -> None:
+        if not records:
+            return
+        moved = {record.barcode for record in records}
+        previous_ids = {record.product_id for record in records}
+
+        for record in records:
+            record.product = product
+
+        if not previous_ids:
+            return
+
+        result = await session.execute(
+            select(Product)
+            .options(selectinload(Product.barcodes))
+            .where(Product.id.in_(previous_ids))
+        )
+        old_products = result.scalars().all()
+        for old_product in old_products:
+            if old_product.barcode not in moved:
+                continue
+            remaining = [
+                barcode for barcode in old_product.barcodes if barcode.barcode not in moved
+            ]
+            if remaining:
+                new_primary = next((barcode for barcode in remaining if barcode.is_primary), remaining[0])
+                for barcode in remaining:
+                    barcode.is_primary = barcode is new_primary
+                old_product.barcode = new_primary.barcode
+            else:
+                old_product.barcode = None
     
     async def create_product(
         self,
@@ -118,16 +265,19 @@ class ProductService(LoggerMixin):
                 staff_message=f"Product with SKU '{sku}' already exists",
                 details={"field": "sku", "value": sku},
             )
-        
-        # Check barcode uniqueness if provided
-        if input_data.barcode:
-            existing_barcode = await product_repository.get_by_barcode(
-                session, input_data.barcode
-            )
-            if existing_barcode:
+
+        barcodes, primary_barcode = self._resolve_barcode_create(
+            barcode=input_data.barcode,
+            barcodes=input_data.barcodes,
+            primary_barcode=input_data.primary_barcode,
+        )
+        if barcodes:
+            existing_barcodes = await product_repository.get_barcodes(session, barcodes)
+            if existing_barcodes:
+                conflict = existing_barcodes[0].barcode
                 raise ValidationError(
-                    staff_message=f"Barcode '{input_data.barcode}' is already assigned to another product",
-                    details={"field": "barcode", "value": input_data.barcode},
+                    staff_message=f"Barcode '{conflict}' is already assigned to another product",
+                    details={"field": "barcodes", "value": conflict},
                 )
         
         # Validate perishable consistency
@@ -173,7 +323,7 @@ class ProductService(LoggerMixin):
             unit_price=input_data.unit_price,
             cost_price=input_data.cost_price,
             tax_rate=input_data.tax_rate,
-            barcode=input_data.barcode,
+            barcode=primary_barcode,
             unit_of_measure=input_data.unit_of_measure,
             pack_size=input_data.pack_size,
             is_perishable=input_data.is_perishable,
@@ -183,11 +333,19 @@ class ProductService(LoggerMixin):
             featured=input_data.featured,
             priority=input_data.priority,
         )
-
-        if input_data.stock is not None and input_data.stock > 0:
-            await self._seed_initial_stock(session, sku, input_data.stock, input_data.user_id)
+        if barcodes:
+            for barcode_value in barcodes:
+                session.add(
+                    ProductBarcode(
+                        product_id=product.id,
+                        barcode=barcode_value,
+                        is_primary=barcode_value == primary_barcode,
+                    )
+                )
+            product.barcode = primary_barcode
         
         await session.commit()
+        await self._ensure_barcodes_loaded(session, product)
         
         self.logger.info(
             "Product created",
@@ -229,16 +387,19 @@ class ProductService(LoggerMixin):
                 details={"resource": "product", "identifier": identifier},
             )
         
-        # Check barcode uniqueness if being updated
-        if input_data.barcode and input_data.barcode != product.barcode:
-            existing_barcode = await product_repository.get_by_barcode(
-                session, input_data.barcode
-            )
-            if existing_barcode and existing_barcode.id != product.id:
+        barcodes_payload, primary_payload = self._resolve_barcode_update(input_data)
+        conflicting_records: list[ProductBarcode] = []
+        if barcodes_payload is not None:
+            if not barcodes_payload and primary_payload:
                 raise ValidationError(
-                    staff_message=f"Barcode '{input_data.barcode}' is already assigned to another product",
-                    details={"field": "barcode", "value": input_data.barcode},
+                    staff_message="primary_barcode cannot be set without barcodes",
+                    details={"field": "primary_barcode", "value": primary_payload},
                 )
+            if barcodes_payload:
+                existing_barcodes = await product_repository.get_barcodes(session, barcodes_payload)
+                conflicting_records = [
+                    record for record in existing_barcodes if record.product_id != product.id
+                ]
         
         # Update only provided fields
         update_fields = {}
@@ -256,8 +417,8 @@ class ProductService(LoggerMixin):
 
         for field in [
             "name", "description", "category", "brand", "unit_price",
-            "cost_price", "tax_rate", "barcode", "unit_of_measure",
-            "pack_size", "is_perishable", "shelf_life_days", "requires_cold_storage",
+            "cost_price", "tax_rate", "unit_of_measure", "pack_size",
+            "is_perishable", "shelf_life_days", "requires_cold_storage",
             "subcategory", "image_url", "image_file", "status", "featured", "priority"
         ]:
             value = getattr(input_data, field)
@@ -278,14 +439,51 @@ class ProductService(LoggerMixin):
                 updated_fields=list(update_fields.keys()),
             )
 
-        if input_data.stock is not None:
-            await self._set_stock_default_location(
-                session,
-                product.sku,
-                input_data.stock,
-                input_data.user_id,
-            )
+        if barcodes_payload is not None or primary_payload is not None:
+            await session.refresh(product, ["barcodes"])
+            if barcodes_payload and conflicting_records:
+                await self._reassign_barcodes(
+                    session,
+                    product=product,
+                    records=conflicting_records,
+                )
+                await session.flush()
+            existing_map = {barcode.barcode: barcode for barcode in product.barcodes}
+            if barcodes_payload is None:
+                if not product.barcodes:
+                    raise ValidationError(
+                        staff_message="No existing barcodes to update",
+                        details={"field": "primary_barcode"},
+                    )
+                if primary_payload not in existing_map:
+                    raise ValidationError(
+                        staff_message="primary_barcode must reference an existing barcode",
+                        details={"field": "primary_barcode", "value": primary_payload},
+                    )
+                for barcode in product.barcodes:
+                    barcode.is_primary = barcode.barcode == primary_payload
+                product.barcode = primary_payload
+            else:
+                desired = set(barcodes_payload)
+                for barcode in list(product.barcodes):
+                    if barcode.barcode not in desired:
+                        product.barcodes.remove(barcode)
+                if not barcodes_payload:
+                    product.barcode = None
+                for barcode_value in barcodes_payload:
+                    record = existing_map.get(barcode_value)
+                    if record is None:
+                        record = ProductBarcode(
+                            product_id=product.id,
+                            barcode=barcode_value,
+                        )
+                        product.barcodes.append(record)
+                    record.is_primary = barcode_value == primary_payload
+                product.barcode = primary_payload
+            await session.commit()
+            await session.refresh(product)
         
+        await self._ensure_barcodes_loaded(session, product)
         return product
 
     async def get_product_by_identifier(
@@ -304,6 +502,7 @@ class ProductService(LoggerMixin):
                 staff_message=f"Product not found: {identifier}",
                 details={"resource": "product", "identifier": identifier},
             )
+        await self._ensure_barcodes_loaded(session, product)
         return product
     
     async def get_product_by_sku(
@@ -330,6 +529,7 @@ class ProductService(LoggerMixin):
                 staff_message=f"Product not found: {sku}",
                 details={"resource": "product", "identifier": sku},
             )
+        await self._ensure_barcodes_loaded(session, product)
         return product
     
     async def get_product_by_barcode(
@@ -356,6 +556,7 @@ class ProductService(LoggerMixin):
                 staff_message=f"Product not found with barcode: {barcode}",
                 details={"resource": "product", "identifier": barcode},
             )
+        await self._ensure_barcodes_loaded(session, product)
         return product
     
     async def list_products(
@@ -393,6 +594,7 @@ class ProductService(LoggerMixin):
 
         query = (
             select(Product, stock_col.label("stock"))
+            .options(selectinload(Product.barcodes))
             .outerjoin(stock_subq, stock_subq.c.product_id == Product.id)
             .where(Product.is_active == True)
         )
@@ -440,15 +642,21 @@ class ProductService(LoggerMixin):
         # Apply search filter
         if search:
             search_pattern = f"%{search}%"
+            barcode_exists = exists(
+                select(ProductBarcode.id).where(
+                    ProductBarcode.product_id == Product.id,
+                    ProductBarcode.barcode.ilike(search_pattern),
+                )
+            )
             query = query.where(
                 (Product.name.ilike(search_pattern)) |
                 (Product.sku.ilike(search_pattern)) |
-                (Product.barcode.ilike(search_pattern))
+                barcode_exists
             )
             count_query = count_query.where(
                 (Product.name.ilike(search_pattern)) |
                 (Product.sku.ilike(search_pattern)) |
-                (Product.barcode.ilike(search_pattern))
+                barcode_exists
             )
 
         if in_stock is True:
@@ -514,6 +722,7 @@ class ProductService(LoggerMixin):
             sku=product.sku,
         )
         
+        await self._ensure_barcodes_loaded(session, product)
         return product
     
     async def get_products_by_category(

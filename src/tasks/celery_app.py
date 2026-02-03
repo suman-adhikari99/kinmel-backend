@@ -50,6 +50,7 @@ celery_app = Celery(
         "src.tasks.order_tasks",
         "src.tasks.email_tasks",
         "src.tasks.notification_tasks",
+        "src.tasks.pos_tasks",
     ],
 )
 
@@ -205,6 +206,15 @@ celery_app.conf.update(
         "cleanup-notifications": {
             "task": "src.tasks.notification_tasks.cleanup_notifications",
             "schedule": crontab(hour=2, minute=30),
+        },
+
+        # ───────────────────────────────────────────────────────
+        # POS RESERVATION EXPIRY: Every 1 minute
+        # ───────────────────────────────────────────────────────
+        "expire-pos-reservations": {
+            "task": "src.tasks.pos_tasks.expire_pos_reservations",
+            "schedule": 60.0,
+            "options": {"queue": "high_priority"},
         },
     },
     

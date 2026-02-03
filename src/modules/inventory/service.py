@@ -42,6 +42,8 @@ from src.core.logging import LoggerMixin
 from src.modules.inventory.models import (
     InventoryBatch,
     InventoryItem,
+    Location,
+    LocationType,
     MovementReason,
     MovementType,
     StockMovement,
@@ -148,6 +150,98 @@ class InventoryService(LoggerMixin):
         if location_id:
             return location_id
         return await self.repo.get_default_location_id(session)
+
+    async def ensure_inventory_item(
+        self,
+        session: AsyncSession,
+        *,
+        sku: str,
+        location_id: str,
+        product_id: str | None = None,
+        initial_physical_stock: int = 0,
+        initial_buffer: int = 0,
+        initial_reorder_point: int = 0,
+        initial_max_stock: int | None = None,
+    ) -> tuple[InventoryItem, bool]:
+        """
+        Ensure an inventory item exists for a SKU/location.
+
+        Returns the item and a flag indicating whether it was created or reactivated.
+        """
+        if initial_physical_stock < 0:
+            raise ValidationError("physical_stock", "Stock cannot be negative")
+        if initial_buffer < 0:
+            raise ValidationError("buffer", "Buffer cannot be negative")
+        if initial_reorder_point < 0:
+            raise ValidationError("reorder_point", "Reorder point cannot be negative")
+
+        item = await self.repo.get_by_sku_and_location(
+            session,
+            sku,
+            location_id,
+        )
+        if item is not None:
+            return item, False
+
+        resolved_product_id = product_id
+        if not resolved_product_id:
+            from src.modules.products.repository import product_repository
+
+            product = await product_repository.get_by_sku(session, sku)
+            if product is None:
+                raise NotFoundError(
+                    "Product",
+                    sku,
+                    staff_message="Product not found.",
+                    details={"resource": "Product", "identifier": sku},
+                )
+            resolved_product_id = product.id
+
+        created = await self.repo.create_if_missing(
+            session,
+            product_id=resolved_product_id,
+            location_id=location_id,
+            physical_stock=initial_physical_stock,
+            buffer=initial_buffer,
+            reorder_point=initial_reorder_point,
+            max_stock=initial_max_stock,
+        )
+
+        item = await self.repo.get_by_sku_and_location(
+            session,
+            sku,
+            location_id,
+            for_update=True,
+            include_inactive=True,
+        )
+        if item is None:
+            raise NotFoundError("InventoryItem", f"{sku}@{location_id}")
+        if not item.is_active:
+            item.is_active = True
+            item.deleted_at = None
+            await session.flush()
+            created = True
+
+        return item, created
+
+    async def list_locations(
+        self,
+        session: AsyncSession,
+        *,
+        location_type: LocationType | None = None,
+    ) -> Sequence[Location]:
+        return await self.repo.list_locations(session, location_type=location_type)
+
+    async def get_location_by_code(
+        self,
+        session: AsyncSession,
+        code: str,
+    ) -> Location:
+        normalized = code.strip().upper()
+        location = await self.repo.get_location_by_code(session, normalized)
+        if not location:
+            raise NotFoundError("Location", normalized)
+        return location
 
     async def _emit_stock_notification(
         self,

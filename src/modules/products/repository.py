@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.logging import LoggerMixin
-from src.modules.products.models import Product
+from src.modules.products.models import Product, ProductBarcode
 from src.modules.inventory.models import InventoryItem
 
 
@@ -60,12 +60,35 @@ class ProductRepository(LoggerMixin):
         barcode: str,
     ) -> Product | None:
         """Get product by barcode."""
-        query = select(Product).where(
+        query = (
+            select(Product)
+            .join(ProductBarcode)
+            .where(
+                ProductBarcode.barcode == barcode,
+                Product.is_active == True,
+            )
+        )
+        result = await session.execute(query)
+        product = result.scalar_one_or_none()
+        if product:
+            return product
+        legacy_query = select(Product).where(
             Product.barcode == barcode,
             Product.is_active == True,
         )
+        legacy_result = await session.execute(legacy_query)
+        return legacy_result.scalar_one_or_none()
+
+    async def get_barcodes(
+        self,
+        session: AsyncSession,
+        barcodes: Sequence[str],
+    ) -> Sequence[ProductBarcode]:
+        if not barcodes:
+            return []
+        query = select(ProductBarcode).where(ProductBarcode.barcode.in_(barcodes))
         result = await session.execute(query)
-        return result.scalar_one_or_none()
+        return result.scalars().all()
     
     async def get_all(
         self,

@@ -24,6 +24,46 @@ from typing import Literal
 
 from src.modules.products.models import ProductStatus
 
+BARCODE_LENGTHS = {8, 12, 13, 14}
+
+
+def normalize_barcode(value: str | None) -> str | None:
+    if value is None:
+        return None
+    value = value.strip()
+    if not value:
+        raise ValueError("Barcode cannot be empty")
+    if not value.isalnum():
+        raise ValueError("Barcode must be alphanumeric")
+    if value.isdigit() and len(value) not in BARCODE_LENGTHS:
+        raise ValueError("Barcode must be 8, 12, 13, or 14 digits")
+    return value
+
+
+def normalize_barcode_list(value) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, (list, tuple, set)):
+        items: list[str] = []
+        for entry in value:
+            if isinstance(entry, str):
+                items.append(entry)
+                continue
+            barcode = None
+            if isinstance(entry, dict):
+                barcode = entry.get("barcode")
+            else:
+                barcode = getattr(entry, "barcode", None)
+            if barcode:
+                items.append(barcode)
+        return items
+    barcode = getattr(value, "barcode", None)
+    if barcode:
+        return [barcode]
+    return []
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # BASE SCHEMAS
@@ -131,7 +171,17 @@ class CreateProductRequest(StrictModel):
     barcode: str | None = Field(
         default=None,
         max_length=50,
-        description="UPC/EAN barcode",
+        description="Deprecated: use barcodes/primary_barcode",
+    )
+
+    barcodes: list[str] | None = Field(
+        default=None,
+        description="Additional barcodes for POS scanning",
+    )
+
+    primary_barcode: str | None = Field(
+        default=None,
+        description="Primary barcode (must be included in barcodes)",
     )
 
     subcategory: str | None = Field(
@@ -171,7 +221,7 @@ class CreateProductRequest(StrictModel):
     stock: int | None = Field(
         default=None,
         ge=0,
-        description="Initial stock quantity (optional)",
+        description="Deprecated: ignored (use inventory module)",
     )
 
     variants: list[ProductVariantRequest] | None = Field(
@@ -250,11 +300,35 @@ class CreateProductRequest(StrictModel):
     @classmethod
     def validate_barcode(cls, v: str | None) -> str | None:
         """Validate barcode format."""
-        if v is not None:
-            v = v.strip()
-            if not v.isalnum():
-                raise ValueError("Barcode must be alphanumeric")
-        return v
+        return normalize_barcode(v)
+
+    @field_validator("barcodes")
+    @classmethod
+    def validate_barcodes(cls, v: list[str] | None) -> list[str] | None:
+        if v is None:
+            return None
+        cleaned = [normalize_barcode(item) for item in v]
+        if len(set(cleaned)) != len(cleaned):
+            raise ValueError("Barcodes must be unique")
+        return cleaned
+
+    @field_validator("primary_barcode")
+    @classmethod
+    def validate_primary_barcode(cls, v: str | None) -> str | None:
+        return normalize_barcode(v)
+
+    @model_validator(mode="after")
+    def validate_barcode_fields(self):
+        if self.barcode and self.barcodes:
+            raise ValueError("Use either barcode or barcodes, not both")
+        if self.barcode and self.primary_barcode:
+            raise ValueError("primary_barcode cannot be used with barcode")
+        if self.barcodes is not None and self.primary_barcode:
+            if not self.barcodes:
+                raise ValueError("primary_barcode cannot be set without barcodes")
+            if self.primary_barcode not in self.barcodes:
+                raise ValueError("primary_barcode must be included in barcodes")
+        return self
 
 
 class UpdateProductRequest(StrictModel):
@@ -322,7 +396,17 @@ class UpdateProductRequest(StrictModel):
     barcode: str | None = Field(
         default=None,
         max_length=50,
-        description="UPC/EAN barcode",
+        description="Deprecated: use barcodes/primary_barcode",
+    )
+
+    barcodes: list[str] | None = Field(
+        default=None,
+        description="Additional barcodes for POS scanning",
+    )
+
+    primary_barcode: str | None = Field(
+        default=None,
+        description="Primary barcode (must be included in barcodes)",
     )
 
     subcategory: str | None = Field(
@@ -362,7 +446,7 @@ class UpdateProductRequest(StrictModel):
     stock: int | None = Field(
         default=None,
         ge=0,
-        description="Updated stock quantity (optional)",
+        description="Deprecated: ignored (use inventory module)",
     )
 
     variants: list[ProductVariantRequest] | None = Field(
@@ -436,6 +520,39 @@ class UpdateProductRequest(StrictModel):
             raise ValueError("SKU can only contain letters, numbers, and hyphens")
         return v
 
+    @field_validator("barcode")
+    @classmethod
+    def validate_barcode(cls, v: str | None) -> str | None:
+        return normalize_barcode(v)
+
+    @field_validator("barcodes")
+    @classmethod
+    def validate_barcodes(cls, v: list[str] | None) -> list[str] | None:
+        if v is None:
+            return None
+        cleaned = [normalize_barcode(item) for item in v]
+        if len(set(cleaned)) != len(cleaned):
+            raise ValueError("Barcodes must be unique")
+        return cleaned
+
+    @field_validator("primary_barcode")
+    @classmethod
+    def validate_primary_barcode(cls, v: str | None) -> str | None:
+        return normalize_barcode(v)
+
+    @model_validator(mode="after")
+    def validate_barcode_fields(self):
+        if self.barcode and self.barcodes:
+            raise ValueError("Use either barcode or barcodes, not both")
+        if self.barcode and self.primary_barcode:
+            raise ValueError("primary_barcode cannot be used with barcode")
+        if self.barcodes is not None and self.primary_barcode:
+            if not self.barcodes:
+                raise ValueError("primary_barcode cannot be set without barcodes")
+            if self.primary_barcode not in self.barcodes:
+                raise ValueError("primary_barcode must be included in barcodes")
+        return self
+
 
 class ProductBulkRequest(StrictModel):
     """Bulk action payload."""
@@ -481,6 +598,8 @@ class ProductResponse(BaseModel):
     cost_price: Decimal | None
     tax_rate: Decimal
     barcode: str | None
+    primary_barcode: str | None = None
+    barcodes: list[str] = Field(default_factory=list)
     unit_of_measure: str
     pack_size: int
     is_perishable: bool
@@ -495,6 +614,11 @@ class ProductResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     variants: list[ProductVariantResponse] = Field(default_factory=list)
+
+    @field_validator("barcodes", mode="before")
+    @classmethod
+    def coerce_barcodes(cls, v):
+        return normalize_barcode_list(v)
     
     @computed_field
     @property
@@ -540,6 +664,8 @@ class ProductSummaryResponse(BaseModel):
     unit_price: Decimal
     tax_rate: Decimal
     stock: int = 0
+    primary_barcode: str | None = None
+    barcodes: list[str] = Field(default_factory=list)
     status: ProductStatus
     featured: bool
     priority: int
@@ -548,6 +674,11 @@ class ProductSummaryResponse(BaseModel):
     is_active: bool
     variants_count: int = 0
     updated_at: datetime | None = None
+
+    @field_validator("barcodes", mode="before")
+    @classmethod
+    def coerce_barcodes(cls, v):
+        return normalize_barcode_list(v)
 
     @computed_field
     @property

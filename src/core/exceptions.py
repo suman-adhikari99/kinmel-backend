@@ -75,7 +75,35 @@ class SessionExpiredError(AuthenticationError):
 class NotFoundError(KinmelException):
     """Resource not found (404)."""
     
-    def __init__(self, resource: str, identifier: Any):
+    def __init__(
+        self,
+        resource: str | None = None,
+        identifier: Any | None = None,
+        *,
+        staff_message: str | None = None,
+        details: dict[str, Any] | None = None,
+    ):
+        if staff_message is not None or details is not None:
+            message = staff_message or "Resource not found"
+            if details is None:
+                details = {}
+                if resource is not None:
+                    details["resource"] = resource
+                if identifier is not None:
+                    details["identifier"] = str(identifier)
+            super().__init__(
+                message=message,
+                staff_message=message,
+                details=details,
+            )
+            return
+        if resource is None:
+            super().__init__(
+                message="Resource not found",
+                staff_message="Could not find the requested resource.",
+                details={},
+            )
+            return
         super().__init__(
             message=f"{resource} not found: {identifier}",
             staff_message=f"Could not find the {resource.lower()}. It may have been deleted.",
@@ -170,10 +198,37 @@ class LocationCapacityExceededError(KinmelException):
 class ValidationError(KinmelException):
     """Input validation failed (422)."""
     
-    def __init__(self, field: str, message: str):
+    def __init__(
+        self,
+        field: str | None = None,
+        message: str | None = None,
+        *,
+        staff_message: str | None = None,
+        details: dict[str, Any] | None = None,
+    ):
+        if staff_message is not None or details is not None:
+            resolved_message = staff_message or message or "Validation error"
+            if details is None:
+                details = {}
+                if field is not None:
+                    details["field"] = field
+            super().__init__(
+                message=resolved_message,
+                staff_message=resolved_message,
+                details=details,
+            )
+            return
+        if field is None:
+            resolved_message = message or "Validation error"
+            super().__init__(
+                message=resolved_message,
+                staff_message=resolved_message,
+                details={},
+            )
+            return
         super().__init__(
             message=f"Validation failed for '{field}': {message}",
-            staff_message=message,
+            staff_message=message or "Validation error",
             details={"field": field},
         )
 
@@ -206,4 +261,3 @@ class ConcurrencyError(KinmelException):
             staff_message="Someone else just updated this. Please refresh and try again.",
             details={"resource": resource, "identifier": str(identifier)},
         )
-

@@ -149,6 +149,7 @@ def create_app() -> FastAPI:
     from src.modules.reports.router import router as reports_router
     from src.modules.customers.router import router as customers_router
     from src.modules.notifications.router import router as notifications_router
+    from src.modules.pos.router import router as pos_router
     
     # Auth router (login, refresh, register)
     app.include_router(
@@ -214,6 +215,11 @@ def create_app() -> FastAPI:
 
     app.include_router(
         notifications_router,
+        prefix=f"{settings.api_v1_prefix}",
+    )
+
+    app.include_router(
+        pos_router,
         prefix=f"{settings.api_v1_prefix}",
     )
     

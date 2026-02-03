@@ -210,7 +210,14 @@ def resolve_product_image_url(request: Request, image_url: str | None, image_fil
     return url or None
 
 
+def apply_barcodes(response: ProductResponse, product) -> None:
+    primary_barcode, barcodes = product_service.resolve_barcodes(product)
+    response.primary_barcode = primary_barcode
+    response.barcodes = barcodes
+
+
 def build_summary(request: Request, product, stock: int) -> ProductSummaryResponse:
+    primary_barcode, barcodes = product_service.resolve_barcodes(product)
     return ProductSummaryResponse(
         id=product.id,
         sku=product.sku,
@@ -220,6 +227,8 @@ def build_summary(request: Request, product, stock: int) -> ProductSummaryRespon
         unit_price=product.unit_price,
         tax_rate=product.tax_rate,
         stock=stock,
+        primary_barcode=primary_barcode,
+        barcodes=barcodes,
         status=product.status,
         featured=product.featured,
         priority=product.priority,
@@ -388,6 +397,7 @@ async def get_product(
         response.stock = stock
         response.variants = []
         response.image_url = resolve_product_image_url(request, product.image_url, product.image_file)
+        apply_barcodes(response, product)
         return response
     except Exception as e:
         handle_service_error(e)
@@ -422,6 +432,7 @@ async def get_product_by_barcode(
         response.stock = stock
         response.variants = []
         response.image_url = resolve_product_image_url(request, product.image_url, product.image_file)
+        apply_barcodes(response, product)
         return response
     except Exception as e:
         handle_service_error(e)
@@ -476,6 +487,8 @@ async def create_product(
                 cost_price=request.cost_price,
                 tax_rate=request.tax_rate,
                 barcode=request.barcode,
+                barcodes=request.barcodes,
+                primary_barcode=request.primary_barcode,
                 unit_of_measure=request.unit_of_measure,
                 pack_size=request.pack_size,
                 is_perishable=request.is_perishable,
@@ -484,13 +497,13 @@ async def create_product(
                 status=request.status,
                 featured=request.featured,
                 priority=request.priority,
-                stock=request.stock,
                 user_id=user.sub,
             ),
         )
         response = ProductResponse.model_validate(product)
         response.stock = await product_repository.get_stock_by_product_id(db, product.id)
         response.image_url = resolve_product_image_url(req, product.image_url, product.image_file)
+        apply_barcodes(response, product)
         return response
     except Exception as e:
         handle_service_error(e)
@@ -541,6 +554,8 @@ async def update_product(
                 cost_price=request.cost_price,
                 tax_rate=request.tax_rate,
                 barcode=request.barcode,
+                barcodes=request.barcodes,
+                primary_barcode=request.primary_barcode,
                 unit_of_measure=request.unit_of_measure,
                 pack_size=request.pack_size,
                 is_perishable=request.is_perishable,
@@ -549,13 +564,13 @@ async def update_product(
                 status=request.status,
                 featured=request.featured,
                 priority=request.priority,
-                stock=request.stock,
                 user_id=user.sub,
             ),
         )
         response = ProductResponse.model_validate(product)
         response.stock = await product_repository.get_stock_by_product_id(db, product.id)
         response.image_url = resolve_product_image_url(req, product.image_url, product.image_file)
+        apply_barcodes(response, product)
         return response
     except Exception as e:
         handle_service_error(e)
@@ -610,6 +625,7 @@ async def delete_product(
         product = await product_service.delete_product(db, identifier)
         response = ProductResponse.model_validate(product)
         response.image_url = resolve_product_image_url(req, product.image_url, product.image_file)
+        apply_barcodes(response, product)
         return response
     except Exception as e:
         handle_service_error(e)
@@ -995,6 +1011,7 @@ async def upload_category_image(
 async def get_products_by_category(
     category_code: str,
     db: DbSession,
+    request: Request,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> ProductListResponse:
@@ -1016,7 +1033,7 @@ async def get_products_by_category(
     )
     
     return ProductListResponse(
-        items=[build_summary(product, int(stock or 0)) for product, stock in products],
+        items=[build_summary(request, product, int(stock or 0)) for product, stock in products],
         total=total,
         limit=limit,
         offset=offset,

@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
+    ForeignKey,
     Index,
     Integer,
     Numeric,
@@ -22,6 +23,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.models import BaseModel, SoftDeleteMixin
@@ -136,6 +138,7 @@ class Product(BaseModel, SoftDeleteMixin):
         shelf_life_days: Expected shelf life for perishables
         barcode: UPC/EAN barcode
         tax_rate: Applicable tax rate
+        barcodes: Additional barcodes (POS aliases, case packs)
     """
     
     __tablename__ = "products"
@@ -337,6 +340,12 @@ class Product(BaseModel, SoftDeleteMixin):
         back_populates="product",
         lazy="noload",  # Load explicitly when needed
     )
+
+    barcodes: Mapped[list["ProductBarcode"]] = relationship(
+        back_populates="product",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
     
     # ─────────────────────────────────────────────────────────────
     # Computed Properties
@@ -353,6 +362,47 @@ class Product(BaseModel, SoftDeleteMixin):
     def price_with_tax(self) -> Decimal:
         """Calculate price including tax."""
         return self.unit_price * (1 + self.tax_rate)
+
+    @property
+    def primary_barcode(self) -> str | None:
+        if "barcodes" in self.__dict__:
+            for barcode in self.barcodes:
+                if barcode.is_primary:
+                    return barcode.barcode
+            if self.barcodes:
+                return self.barcodes[0].barcode
+        return self.barcode
     
     def __repr__(self) -> str:
         return f"<Product(sku={self.sku}, name={self.name})>"
+
+
+class ProductBarcode(BaseModel):
+    """Barcode alias for products (POS scanning)."""
+
+    __tablename__ = "product_barcodes"
+
+    __table_args__ = (
+        UniqueConstraint("barcode", name="uq_product_barcodes_barcode"),
+        Index("ix_product_barcodes_product", "product_id"),
+    )
+
+    product_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("products.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    barcode: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+    is_primary: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
+
+    product: Mapped["Product"] = relationship(
+        back_populates="barcodes",
+        lazy="joined",
+    )
