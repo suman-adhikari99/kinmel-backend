@@ -27,6 +27,7 @@ email-validator==2.1.0.post1
 # Security
 # ─────────────────────────────────────────────────────────────────
 passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
 pyjwt==2.8.0
 python-jose[cryptography]==3.3.0
 
@@ -62,3 +63,5 @@ aiosqlite==0.19.0
 # ─────────────────────────────────────────────────────────────────
 ruff==0.2.1
 mypy==1.8.0
+psycopg2-binary
+asyncpg

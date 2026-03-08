@@ -86,6 +86,19 @@ SEED_USERS = [
         "is_active": False,
         "deleted_at": datetime.now(UTC) - timedelta(days=10),
     },
+    {
+        "email": "canceled@kinmel-test.local",
+        "full_name": "Canceled Invite User (Seed)",
+        "role": Role.STAFF,
+        "is_verified": False,
+        "phone": None,
+        "avatar_url": AVATAR_URLS[0],
+        "is_active": False,
+        "invite_token": "seed-canceled-token",
+        "invited_at": datetime.now(UTC) - timedelta(days=12),
+        "invite_expires_at": datetime.now(UTC) - timedelta(days=5),
+        "deleted_at": datetime.now(UTC) - timedelta(days=4),
+    },
 ]
 
 

@@ -1,0 +1,5 @@
+Sales Report
+
+date,total_sales,gst,orders
+2026-03-01,120.0,12.0,4
+2026-03-02,143.5,14.35,5

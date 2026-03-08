@@ -27,7 +27,7 @@ import argparse
 import asyncio
 import sys
 import base64
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 from uuid import NAMESPACE_DNS, uuid4, uuid5
@@ -78,6 +78,7 @@ from src.modules.orders.models import (
 
 settings = get_settings()
 logger = get_logger(__name__)
+UTC = timezone.utc
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1219,6 +1220,12 @@ class DatabaseSeeder:
         await self.session.execute(text("DELETE FROM order_status_history"))
         await self.session.execute(text("DELETE FROM order_item_substitutions"))
         await self.session.execute(text("DELETE FROM order_items"))
+        await self.session.execute(text("DELETE FROM order_export_jobs"))
+        await self.session.execute(text("DELETE FROM notification_reads"))
+        await self.session.execute(text("DELETE FROM notifications"))
+        await self.session.execute(text("DELETE FROM report_exports"))
+        await self.session.execute(text("DELETE FROM pos_sale_lines"))
+        await self.session.execute(text("DELETE FROM pos_sales"))
         await self.session.execute(text("DELETE FROM revenue_payments"))
         await self.session.execute(text("DELETE FROM orders"))
         await self.session.execute(text("DELETE FROM revenue_payouts"))
@@ -1228,6 +1235,7 @@ class DatabaseSeeder:
         await self.session.execute(text("DELETE FROM stock_movements"))
         await self.session.execute(text("DELETE FROM inventory_batches"))
         await self.session.execute(text("DELETE FROM inventory_items"))
+        await self.session.execute(text("DELETE FROM product_barcodes"))
         await self.session.execute(text("DELETE FROM products"))
         await self.session.execute(text("DELETE FROM locations"))
         await self.session.execute(text("DELETE FROM users"))

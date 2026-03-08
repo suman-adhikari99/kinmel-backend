@@ -9,9 +9,12 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import base64
 import os
+import re
 import sys
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 from sqlalchemy import select
 
@@ -23,6 +26,17 @@ from src.core.database import async_session_factory
 from src.modules.products.models import Category, CategoryStatus
 
 
+PLACEHOLDER_PNG_BYTES = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="
+)
+UPLOADS_DIR = Path(PROJECT_ROOT) / "uploads" / "categories"
+
+
+def _slugify(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+    return slug or "category"
+
+
 SEED_CATEGORIES = [
     {
         "name": "Dairy",
@@ -30,7 +44,6 @@ SEED_CATEGORIES = [
         "status": CategoryStatus.ACTIVE,
         "featured": True,
         "priority": 10,
-        "image_url": "https://images.unsplash.com/photo-1484980972926-edee96e0960d?auto=format&fit=crop&w=800&q=60",
     },
     {
         "name": "Bakery",
@@ -38,7 +51,6 @@ SEED_CATEGORIES = [
         "status": CategoryStatus.ACTIVE,
         "featured": True,
         "priority": 9,
-        "image_url": "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=60",
     },
     {
         "name": "Produce",
@@ -46,7 +58,6 @@ SEED_CATEGORIES = [
         "status": CategoryStatus.ACTIVE,
         "featured": True,
         "priority": 8,
-        "image_url": "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=60",
     },
     {
         "name": "Pantry",
@@ -54,7 +65,6 @@ SEED_CATEGORIES = [
         "status": CategoryStatus.ACTIVE,
         "featured": False,
         "priority": 4,
-        "image_url": "https://images.unsplash.com/photo-1490818387583-1baba5e638af?auto=format&fit=crop&w=800&q=60",
     },
     {
         "name": "Frozen",
@@ -62,7 +72,6 @@ SEED_CATEGORIES = [
         "status": CategoryStatus.ACTIVE,
         "featured": False,
         "priority": 3,
-        "image_url": "https://images.unsplash.com/photo-1585504198199-20277593b94f?auto=format&fit=crop&w=800&q=60",
     },
     {
         "name": "Household",
@@ -70,7 +79,6 @@ SEED_CATEGORIES = [
         "status": CategoryStatus.ACTIVE,
         "featured": False,
         "priority": 2,
-        "image_url": "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=800&q=60",
     },
     {
         "name": "Seasonal",
@@ -78,7 +86,6 @@ SEED_CATEGORIES = [
         "status": CategoryStatus.ARCHIVED,
         "featured": False,
         "priority": 0,
-        "image_url": "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=800&q=60",
         "is_active": False,
         "deleted_at": datetime.now(UTC) - timedelta(days=30),
     },
@@ -86,6 +93,8 @@ SEED_CATEGORIES = [
 
 
 async def seed_categories() -> None:
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
     async with async_session_factory() as session:
         created = 0
         for entry in SEED_CATEGORIES:
@@ -94,14 +103,20 @@ async def seed_categories() -> None:
             )
             if existing.scalar_one_or_none():
                 continue
+
+            image_file = f"seed-category-{_slugify(entry['name'])}.png"
+            image_path = UPLOADS_DIR / image_file
+            if not image_path.exists():
+                image_path.write_bytes(PLACEHOLDER_PNG_BYTES)
+
             category = Category(
                 name=entry["name"],
                 description=entry["description"],
                 status=entry["status"],
                 featured=entry["featured"],
                 priority=entry["priority"],
-                image_url=entry["image_url"],
-                image_file=None,
+                image_url=f"/uploads/categories/{image_file}",
+                image_file=image_file,
                 is_active=entry.get("is_active", True),
                 deleted_at=entry.get("deleted_at"),
             )

@@ -9,10 +9,13 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import base64
 import os
+import re
 import sys
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from pathlib import Path
 
 from sqlalchemy import select
 
@@ -24,12 +27,15 @@ from src.core.database import async_session_factory
 from src.modules.products.models import Product, ProductStatus
 
 
-PRODUCT_IMAGES = [
-    "https://images.unsplash.com/photo-1514996937319-344454492b37?auto=format&fit=crop&w=800&q=60",
-    "https://images.unsplash.com/photo-1464965911861-746a04b4bca6?auto=format&fit=crop&w=800&q=60",
-    "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=60",
-    "https://images.unsplash.com/photo-1506806732259-39c2d0268443?auto=format&fit=crop&w=800&q=60",
-]
+PLACEHOLDER_PNG_BYTES = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="
+)
+UPLOADS_DIR = Path(PROJECT_ROOT) / "uploads" / "products"
+
+
+def _slugify(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+    return slug or "product"
 
 SEED_PRODUCTS = [
     {
@@ -39,7 +45,6 @@ SEED_PRODUCTS = [
         "category": "Dairy",
         "brand": "Farm Fresh",
         "subcategory": "Milk",
-        "image_url": PRODUCT_IMAGES[0],
         "unit_price": Decimal("4.99"),
         "cost_price": Decimal("3.10"),
         "tax_rate": Decimal("0.10"),
@@ -59,7 +64,6 @@ SEED_PRODUCTS = [
         "category": "Bakery",
         "brand": "Golden Crust",
         "subcategory": "Bread",
-        "image_url": PRODUCT_IMAGES[1],
         "unit_price": Decimal("6.50"),
         "cost_price": Decimal("3.80"),
         "tax_rate": Decimal("0.10"),
@@ -79,7 +83,6 @@ SEED_PRODUCTS = [
         "category": "Produce",
         "brand": "Orchard Select",
         "subcategory": "Fruit",
-        "image_url": PRODUCT_IMAGES[2],
         "unit_price": Decimal("5.20"),
         "cost_price": Decimal("2.90"),
         "tax_rate": Decimal("0.10"),
@@ -99,7 +102,6 @@ SEED_PRODUCTS = [
         "category": "Pantry",
         "brand": "Casa Roma",
         "subcategory": "Pasta",
-        "image_url": PRODUCT_IMAGES[3],
         "unit_price": Decimal("2.80"),
         "cost_price": Decimal("1.40"),
         "tax_rate": Decimal("0.10"),
@@ -119,7 +121,6 @@ SEED_PRODUCTS = [
         "category": "Frozen",
         "brand": "Cool Treats",
         "subcategory": "Dessert",
-        "image_url": PRODUCT_IMAGES[0],
         "unit_price": Decimal("7.90"),
         "cost_price": Decimal("4.20"),
         "tax_rate": Decimal("0.10"),
@@ -139,7 +140,6 @@ SEED_PRODUCTS = [
         "category": "Household",
         "brand": "BrightClean",
         "subcategory": "Cleaning",
-        "image_url": PRODUCT_IMAGES[1],
         "unit_price": Decimal("3.40"),
         "cost_price": Decimal("1.60"),
         "tax_rate": Decimal("0.10"),
@@ -156,6 +156,8 @@ SEED_PRODUCTS = [
 
 
 async def seed_products() -> None:
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
     async with async_session_factory() as session:
         created = 0
         now = datetime.now(UTC)
@@ -165,6 +167,12 @@ async def seed_products() -> None:
             )
             if existing.scalar_one_or_none():
                 continue
+
+            image_file = f"seed-product-{_slugify(entry['sku'])}.png"
+            image_path = UPLOADS_DIR / image_file
+            if not image_path.exists():
+                image_path.write_bytes(PLACEHOLDER_PNG_BYTES)
+
             product = Product(
                 sku=entry["sku"],
                 name=entry["name"],
@@ -172,8 +180,8 @@ async def seed_products() -> None:
                 category=entry["category"],
                 brand=entry["brand"],
                 subcategory=entry["subcategory"],
-                image_url=entry["image_url"],
-                image_file=None,
+                image_url=f"/uploads/products/{image_file}",
+                image_file=image_file,
                 unit_price=entry["unit_price"],
                 cost_price=entry["cost_price"],
                 tax_rate=entry["tax_rate"],

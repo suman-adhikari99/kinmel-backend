@@ -1,0 +1,6 @@
+order_id,total,status,customer
+ORD-1000,45,completed,Customer 1
+ORD-1001,48,completed,Customer 2
+ORD-1002,51,completed,Customer 3
+ORD-1003,54,completed,Customer 4
+ORD-1004,57,completed,Customer 5
